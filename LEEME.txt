@@ -1,0 +1,23 @@
+FOODTRACK PRO — VERSION MEJORADA
+
+CONTENIDO
+- Interfaz renovada y adaptable a móviles.
+- Búsqueda de restaurantes y filtros.
+- Cuentas locales con contraseña protegida mediante SHA-256 Web Crypto.
+- Persistencia de restaurantes, menús, pedidos, notificaciones y cuentas en localStorage.
+- Geolocalización del repartidor en el dispositivo y enlace a Google Maps.
+- Panel de comisiones estimadas: 10% plataforma / 90% restaurante.
+- PWA instalable y caché actualizada.
+
+IMPORTANTE — ALCANCE TÉCNICO
+Esta entrega mejora el prototipo web original. Los datos se guardan únicamente en el navegador/dispositivo donde se utiliza; no se sincronizan entre clientes, dueños, repartidores o administradores. La geolocalización funciona mientras el panel del repartidor está abierto y el usuario concede permiso; no envía posiciones a otros usuarios. La comisión se calcula como simulación y no liquida dinero.
+
+Para operar como negocio real hace falta un backend/API con base de datos central, autenticación segura y recuperación de contraseña, autorización de roles en servidor, almacenamiento seguro de secretos, actualizaciones GPS en tiempo real, notificaciones push y pasarela de pagos. No usar datos reales ni cobrar clientes con esta versión local.
+
+EJECUCIÓN
+- Descomprimir el ZIP.
+- Abrir foodtrack/index.html para probar la interfaz.
+- Para GPS y PWA, publicar el contenido en un hosting HTTPS o ejecutarlo en localhost; los navegadores restringen geolocalización y algunas APIs en archivos locales.
+
+PARA DESPLEGAR EN RENDER CON POSTGRESQL
+Consulta LEEME_RENDER.txt. Esta carpeta incluye package.json, server.js y render.yaml para crear el servidor Node.js y la base PostgreSQL. La app debe desplegarse desde GitHub mediante Render Blueprint; no abras index.html directamente para usar la versión conectada.

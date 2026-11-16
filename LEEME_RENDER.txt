@@ -1,0 +1,63 @@
+FOODTRACK PRO — EDICIÓN RENDER + POSTGRESQL
+============================================
+
+QUÉ INCLUYE
+- Aplicación web FoodTrack Pro original, adaptada para usar una API.
+- Servidor Node.js + Express.
+- Base de datos PostgreSQL persistente.
+- Registro público de clientes e inicio de sesión.
+- Contraseñas cifradas con bcrypt (hash en el servidor).
+- Sesiones JWT.
+- Pedidos guardados en PostgreSQL y vinculados al teléfono de la cuenta.
+- Estado compartido de restaurantes, menús, pedidos y administración.
+- Ubicaciones GPS de repartidores guardadas en una tabla PostgreSQL.
+- Configuración Blueprint para crear Web Service y PostgreSQL en Render.
+- Service Worker actualizado para no interceptar llamadas /api.
+
+IMPORTANTE SOBRE SEGURIDAD Y ALCANCE
+Esta entrega es una base funcional de despliegue y persistencia, no una plataforma de pagos lista para producción.
+- El registro público crea únicamente cuentas de cliente. El administrador inicial se crea con ADMIN_PHONE y ADMIN_PASSWORD.
+- Las cuentas de dueño y repartidor se crean mediante /api/admin/users (ver ejemplo abajo).
+- El estado de negocio es compartido. La autorización por rol es básica: clientes solo pueden crear pedidos y ver los suyos; admin/dueno/repartidor pueden modificar el estado general. Antes de abrir el servicio al público, hay que limitar los datos y las modificaciones de dueños a su propio restaurante y los repartidores a sus pedidos asignados.
+- La ubicación GPS se registra cuando el repartidor abre la app y activa el GPS; no es seguimiento en segundo plano. La ruta /api/locations está disponible para administrador/dueño.
+- No hay pasarela de pago conectada ni liquidación real de comisiones. Los porcentajes siguen siendo cálculos informativos.
+- Los pedidos de demostración no deben tratarse como cobros reales.
+
+DESPLIEGUE EN RENDER
+1. Descomprime este ZIP. La carpeta foodtrack contiene el proyecto completo.
+2. Sube el contenido de la carpeta foodtrack a un repositorio GitHub (los archivos package.json, server.js y render.yaml deben quedar en la raíz del repositorio).
+3. En Render, selecciona New + > Blueprint y conecta ese repositorio.
+4. Render leerá render.yaml y creará el servicio web y la base PostgreSQL.
+5. Cuando Render pida ADMIN_PHONE y ADMIN_PASSWORD, introduce el teléfono del administrador y una contraseña larga (mínimo 12 caracteres recomendado). No compartas estos datos.
+6. Espera a que termine el despliegue y abre la URL *.onrender.com del servicio.
+7. Comprueba https://TU-SERVICIO.onrender.com/api/health. Debe responder: {"ok":true,"database":"connected"}.
+
+VARIABLES DE ENTORNO
+Render configura automáticamente DATABASE_URL y genera JWT_SECRET mediante render.yaml.
+Configura manualmente:
+- ADMIN_PHONE: teléfono del administrador, en formato internacional preferiblemente.
+- ADMIN_PASSWORD: contraseña fuerte del administrador.
+
+CREAR CUENTAS DE DUEÑO O REPARTIDOR
+Primero inicia sesión como administrador y copia el token JWT desde la respuesta de /api/auth/login (no lo publiques ni lo compartas). Luego ejecuta desde una terminal, reemplazando URL, TOKEN y datos:
+
+curl -X POST "https://TU-SERVICIO.onrender.com/api/admin/users" \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Nombre del restaurante o repartidor","address":"Dirección","phone":"+596000000000","password":"UnaClaveFuerte123","role":"dueno"}'
+
+Para un repartidor, cambia role por "repartidor".
+
+ENDPOINTS PRINCIPALES
+GET  /api/health       Estado del servidor y PostgreSQL
+POST /api/auth/register Registro público de clientes
+POST /api/auth/login   Inicio de sesión
+GET  /api/me           Cuenta autenticada
+GET  /api/state        Datos de la aplicación
+PUT  /api/state        Guardar estado (admin, dueño o repartidor)
+POST /api/orders       Crear pedido (cliente)
+POST /api/location     Guardar GPS (repartidor/admin)
+GET  /api/locations    Consultar ubicaciones (admin/dueño)
+POST /api/admin/users  Crear dueño/repartidor (admin)
+
+COPIAS DE SEGURIDAD
+En Render configura copias de seguridad de la base PostgreSQL según el plan contratado. No dependas del almacenamiento del sistema de archivos del servicio web: la persistencia vive en PostgreSQL.

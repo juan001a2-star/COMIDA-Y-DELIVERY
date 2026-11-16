@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodTrack Pro — Plataforma de delivery</title>
+<style>
+:root{--p:#ff6b35;--p2:#ff8c5a;--bg:#f6f7fb;--card:#fff;--tx:#222;--mut:#888;--ok:#2ecc71;--warn:#f1c40f;--bad:#e74c3c;--blu:#3498db}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif}
+body{background:var(--bg);color:var(--tx)}
+header{background:linear-gradient(135deg,var(--p),#ff3d00);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50}
+header h1{font-size:1.3rem}
+.roles{display:flex;gap:8px;flex-wrap:wrap}
+.role-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:.9rem;transition:.2s}
+.role-btn.active,.role-btn:hover{background:#fff;color:var(--p)}
+main{max-width:1100px;margin:20px auto;padding:0 15px}
+.bell{position:relative;cursor:pointer;font-size:1.3rem;background:none;border:none;color:#fff}
+.badge{position:absolute;top:-6px;right:-8px;background:#fff;color:var(--p);border-radius:50%;font-size:.7rem;padding:2px 6px;font-weight:bold;display:none}
+.view{display:none;animation:fade .3s}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:15px}
+.card{background:var(--card);border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.07);overflow:hidden;transition:.2s;cursor:pointer}
+.card:hover{transform:translateY(-4px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.card img{width:100%;height:130px;object-fit:cover}
+.card-body{padding:14px}
+.card-body h3{font-size:1.05rem;margin-bottom:4px}
+.tag{display:inline-block;font-size:.72rem;padding:3px 10px;border-radius:12px;background:#ffe9e0;color:var(--p);margin:2px 3px 2px 0}
+.mut{color:var(--mut);font-size:.85rem}
+.price{color:var(--p);font-weight:bold}
+.btn{background:var(--p);color:#fff;border:none;padding:10px 22px;border-radius:24px;cursor:pointer;font-size:.92rem;font-weight:600;transition:.2s}
+.btn:hover{background:#e04f15}
+.btn.ghost{background:#eee;color:var(--tx)}
+.btn.small{padding:6px 12px;font-size:.78rem}
+.btn.ok{background:var(--ok)}.btn.warn{background:var(--warn);color:#333}.btn.blu{background:var(--blu)}.btn.bad{background:var(--bad)}
+.panel{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:16px}
+input,textarea,select{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:10px;font-size:.9rem;margin-bottom:8px}
+#cart{position:fixed;bottom:20px;right:20px;z-index:60}
+.cart-bar{background:var(--tx);color:#fff;border-radius:30px;padding:12px 24px;cursor:pointer;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100;overflow:auto;padding:30px 12px}
+.modal.open{display:flex;align-items:flex-start;justify-content:center}
+.modal-box{background:#fff;border-radius:16px;max-width:640px;width:100%;padding:22px;position:relative}
+.close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--mut)}
+.toast{position:fixed;top:70px;right:16px;background:var(--tx);color:#fff;padding:13px 20px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.3);z-index:300;animation:slideIn .35s;max-width:320px;font-size:.9rem}
+.toast b{color:var(--p2)}
+.toast.ok{background:var(--ok)}.toast.warn{background:var(--warn);color:#333}
+@keyframes slideIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+.status{font-size:.75rem;padding:3px 10px;border-radius:10px;font-weight:bold}
+.st-recibido{background:#fdeaea;color:var(--bad)}.st-preparacion{background:#fef6e0;color:#b8860b}.st-listo{background:#e8f4fd;color:var(--blu)}.st-entregado{background:#e8f9ef;color:#27ae60}.st-disponible{background:#e8f4fd;color:var(--blu)}.st-aceptado{background:#fef6e0;color:#b8860b}
+.menu-item{padding:10px 0;border-bottom:1px solid #f0f0f0}
+.menu-item .top{display:flex;justify-content:space-between;align-items:flex-start}
+.menu-item .info{flex:1;padding-right:10px}
+.opt{display:flex;justify-content:space-between;align-items:center;background:#fafafa;border-radius:10px;padding:6px 10px;margin-top:6px;font-size:.85rem}
+h2{font-size:1.15rem;margin-bottom:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.hist{color:var(--p);background:none;border:none;cursor:pointer;font-size:.82rem}
+.user-chip{background:rgba(255,255,255,.25);border-radius:20px;padding:6px 14px;font-size:.82rem;cursor:pointer}
+@media(max-width:600px){.grid{grid-template-columns:1fr 1fr}.card img{height:90px}}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff6b35">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+:root{--p:#f06432;--p2:#ff9a62;--bg:#f4f6fa;--tx:#172033;--mut:#718096;--ok:#16a36a;--card:#fff}
+body{background:radial-gradient(circle at 10% 0%,#fff2eb 0,transparent 28%),var(--bg);line-height:1.45}
+header{background:rgba(22,32,51,.97);backdrop-filter:blur(12px);padding:15px max(18px,calc((100% - 1160px)/2));box-shadow:0 8px 24px #17203320}
+header h1{font-size:1.45rem;letter-spacing:-.5px}.role-btn{border-radius:12px;padding:9px 12px}.role-btn.active{color:var(--tx);font-weight:700}
+main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#202d45,#394d69);color:white;padding:28px 32px;border-radius:22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;overflow:hidden;box-shadow:0 14px 34px #17203320}.hero h2{font-size:1.65rem;margin:5px 0}.hero p{color:#dce4ef}.eyebrow{font-size:.7rem;letter-spacing:2px;color:#ffb18c;font-weight:800}.hero-mark{font-size:5rem;filter:drop-shadow(0 8px 10px #0004)}.toolbar{display:grid;grid-template-columns:1fr 220px;gap:10px;margin-bottom:22px}.toolbar input,.toolbar select{margin:0;background:#fff}.card{border-radius:18px;box-shadow:0 5px 18px #1720330c;border:1px solid #e9edf3}.card:hover{transform:translateY(-5px);box-shadow:0 14px 28px #17203318}.card img{height:165px}.card-body{padding:17px}.panel{border-radius:18px;box-shadow:0 5px 20px #1720330c;border:1px solid #e9edf3;padding:21px}.btn{border-radius:12px;background:linear-gradient(135deg,#f06432,#ff874e);box-shadow:0 4px 10px #f0643228}.btn.ghost{box-shadow:none}.modal-box{border-radius:20px;box-shadow:0 20px 60px #0003}.status{border-radius:7px}.gps-box{background:#f2f5f9;padding:12px;border-radius:12px;margin-top:12px;word-break:break-word}.user-chip{background:#ffffff20}.menu-item{padding:13px 0}.toast{border-radius:14px}
+@media(max-width:700px){header{padding:12px}.roles{width:100%}.role-btn{font-size:.76rem;padding:7px 9px}main{margin:16px auto}.hero{padding:22px}.hero h2{font-size:1.25rem}.hero-mark{font-size:3rem}.toolbar{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.card img{height:110px}.card-body{padding:11px}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍔 FoodTrack Pro</h1>
+  <div class="roles">
+    <button class="role-btn active" onclick="switchRole('cliente')">👤 Cliente</button>
+    <button class="role-btn" onclick="switchRole('dueno')">🏪 Dueño</button>
+    <button class="role-btn" onclick="switchRole('repartidor')">🛵 Repartidor</button>
+    <button class="role-btn" onclick="switchRole('admin')">🛡️ Admin</button>
+    <button class="bell" onclick="toggleNotifs()">🔔<span class="badge" id="badge">0</span></button>
+    <span class="user-chip" id="userChip" onclick="openReg()">Iniciar sesión</span>
+  </div>
+</header>
+
+<main>
+<!-- VISTA CLIENTE -->
+<div id="v-cliente" class="view active">
+  <div class="hero"><div><span class="eyebrow">DELIVERY MÁS FÁCIL</span><h2>Tu próxima comida favorita está aquí 🍽️</h2><p>Descubre restaurantes, pide en minutos y sigue tu entrega.</p></div><div class="hero-mark">🍔</div></div>
+  <div class="toolbar"><input id="restSearch" placeholder="Buscar restaurante o comida…" oninput="renderRests()"><select id="restFilter" onchange="renderRests()"><option value="">Todas las categorías</option><option value="burger">Hamburguesas</option><option value="pizza">Pizza</option><option value="taco">Mexicana</option><option value="sushi">Sushi</option></select></div>
+  <h2>Restaurantes cerca de ti 📍</h2><div class="grid" id="restGrid"></div>
+  <div class="panel" style="margin-top:20px">
+    <h2>Mis pedidos</h2>
+    <div id="myOrders"><p class="mut">Aún no has hecho pedidos.</p></div>
+  </div>
+</div>
+
+<!-- VISTA DUEÑO -->
+<div id="v-dueno" class="view">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <h2>🏪 Panel del dueño</h2>
+      <select id="ownerSel" onchange="renderOwner()" style="width:auto;min-width:200px;margin:0"></select>
+    </div>
+    <div id="ownerInfo"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn small ghost" onclick="openBizForm(true)">✏️ Modificar negocio</button>
+      <button class="btn small" onclick="openBizForm(false)">＋ Crear negocio</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>📋 Pedidos entrantes</h2>
+    <div id="ownerOrders"><p class="mut">No hay pedidos nuevos.</p></div>
+  </div>
+  <div class="panel">
+    <h2>🍽️ Mi menú <button class="btn small ghost" onclick="openDishForm()">+ Agregar plato</button></h2>
+    <div id="ownerMenu"></div>
+  </div>
+</div>
+
+<!-- VISTA REPARTIDOR -->
+<div id="v-repartidor" class="view">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <h2>🛵 Panel del repartidor</h2>
+      <label class="row mut" style="font-size:.85rem;cursor:pointer">
+        <input type="checkbox" id="avail" checked style="width:auto;margin:0" onchange="renderRepartidor()"> Disponible para entregas
+      </label>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>📦 Pedidos disponibles</h2>
+    <div id="availOrders"><p class="mut">No hay pedidos disponibles por ahora.</p></div>
+  </div>
+  <div class="panel"><h2>📍 Mi ubicación y seguimiento</h2><p class="mut">Comparte tu ubicación mientras estás conectado para actualizar tu posición de reparto en este dispositivo.</p><div class="row"><button class="btn small" onclick="startDriverGPS()">Activar GPS</button><button class="btn small ghost" onclick="stopDriverGPS()">Detener GPS</button><span id="gpsState" class="mut">GPS apagado</span></div><div id="gpsMap" class="gps-box">La ubicación aparecerá aquí cuando concedas permiso.</div></div>
+  <div class="panel">
+    <h2>🧾 Mis entregas</h2>
+    <div id="myDeliveries"><p class="mut">Aún no has hecho entregas.</p></div>
+  </div>
+</div>
+<!-- VISTA ADMIN -->
+<div id="v-admin" class="view">
+  <div class="panel">
+    <h2>🛡️ Panel del administrador</h2>
+    <div id="adminStats" class="mut"></div>
+  </div>
+  <div class="panel"><h2>💰 Comisiones y ganancias</h2><div id="adminFinance"></div></div>
+  <div class="panel"><div class="row" style="justify-content:space-between"><h2>📍 Ubicaciones de repartidores</h2><button class="btn small ghost" onclick="renderDriverLocations()">Actualizar GPS</button></div><div id="driverLocations"><p class="mut">Pulsa actualizar para consultar las ubicaciones.</p></div></div>
+  <div class="panel">
+    <h2>🏪 Todos los negocios</h2>
+    <div id="adminList"></div>
+  </div>
+</div>
+</main>
+
+<div id="cart" style="display:none" onclick="openCart()"><div class="cart-bar">🛒 <span id="cartCount">0</span> · $<span id="cartTotal">0</span></div></div>
+
+<!-- MODAL restaurante -->
+<div class="modal" id="m-rest"><div class="modal-box">
+  <button class="close" onclick="closeM('m-rest')">✕</button>
+  <div id="restDetail"></div>
+</div></div>
+
+<!-- MODAL carrito -->
+<div class="modal" id="m-cart"><div class="modal-box">
+  <button class="close" onclick="closeM('m-cart')">✕</button>
+  <h2>🛒 Tu pedido</h2>
+  <div id="cartDetail"></div>
+  <h2 style="margin-top:14px">📍 Datos de entrega</h2>
+  <input id="cName" placeholder="Tu nombre">
+  <input id="cAddr" placeholder="Dirección de entrega">
+  <input id="cPhone" placeholder="Teléfono">
+  <select id="cPay"><option value="Verifone (tarjeta en la entrega)">Verifone 💳 (pago en la entrega)</option><option value="Efectivo">Efectivo 💵</option></select>
+  <p class="mut" style="font-size:.82rem;margin-bottom:10px">💳 El repartidor llevará el Verifone para cobrarte directamente al entregar.</p>
+  <button class="btn" style="width:100%" onclick="placeOrder()">Confirmar pedido 🚀</button>
+</div></div>
+
+<!-- MODAL notificaciones -->
+<div class="modal" id="m-notif"><div class="modal-box" style="max-width:420px">
+  <button class="close" onclick="closeM('m-notif')">✕</button>
+  <h2>🔔 Notificaciones</h2>
+  <div id="notifList"><p class="mut">Sin notificaciones.</p></div>
+</div></div>
+
+<!-- MODAL plato -->
+<div class="modal" id="m-dish"><div class="modal-box" style="max-width:420px">
+  <button class="close" onclick="closeM('m-dish')">✕</button>
+  <h2 id="dishTitle">🍽️ Nuevo plato</h2>
+  <input id="dName" placeholder="Nombre del plato">
+  <input id="dDesc" placeholder="Descripción">
+  <div class="row"><input id="dL1" placeholder="Etiqueta precio 1 (ej: Normal)" style="flex:1"><input id="dP1" type="number" min="0" placeholder="Precio 1 ($)" style="flex:1"></div>
+  <div class="row"><input id="dL2" placeholder="Etiqueta precio 2 (ej: Grande)" style="flex:1"><input id="dP2" type="number" min="0" placeholder="Precio 2 ($)" style="flex:1"></div>
+  <button class="btn" style="width:100%" onclick="saveDish()">Guardar 💾</button>
+</div></div>
+
+<!-- MODAL registro cliente -->
+<div class="modal" id="m-reg"><div class="modal-box" style="max-width:420px">
+  <button class="close" onclick="closeM('m-reg')">✕</button>
+  <div id="regStep1">
+    <h2>👤 Crear tu cuenta</h2>
+    <input id="rName" placeholder="Nombre completo">
+    <input id="rAddr" placeholder="Dirección">
+    <input id="rPhone" type="tel" placeholder="Teléfono">
+    <input id="rPassword" type="password" placeholder="Contraseña (mínimo 8 caracteres)" autocomplete="new-password">
+    <select id="rRole" disabled><option value="cliente">Crear cuenta de cliente</option></select><small class="mut">Las cuentas de restaurantes y repartidores las habilita el administrador.</small>
+    <button class="btn" style="width:100%" onclick="sendCode()">Crear cuenta</button><p class="mut" style="margin-top:10px">¿Ya tienes cuenta? <button class="hist" onclick="showLogin()">Iniciar sesión</button></p>
+  </div>
+  <div id="regStep2" style="display:none">
+    <h2>📱 Verifica tu teléfono</h2>
+    <p class="mut" style="margin-bottom:10px">Ingresa el código de 4 dígitos que enviamos por SMS a tu teléfono.</p>
+    <div id="smsBox" style="background:#fff3e6;border:1px dashed var(--p);border-radius:10px;padding:10px;margin-bottom:10px;font-size:.9rem">📱 Esperando código…</div>
+    <input id="rCode" placeholder="Código de verificación" maxlength="4" inputmode="numeric">
+    <button class="btn" style="width:100%" onclick="verifyCodeFn()">Verificar ✅</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="sendCode()">Reenviar código 🔁</button>
+  </div>
+<div id="loginPanel" style="display:none"><h2>🔐 Iniciar sesión</h2><input id="loginPhone" type="tel" placeholder="Teléfono"><input id="loginPassword" type="password" placeholder="Contraseña"><button class="btn" style="width:100%" onclick="loginAccount()">Entrar</button><p class="mut" style="margin-top:10px">¿No tienes cuenta? <button class="hist" onclick="showRegister()">Crear cuenta</button></p></div>
+</div></div>
+
+<!-- MODAL negocio -->
+<div class="modal" id="m-biz"><div class="modal-box" style="max-width:420px">
+  <button class="close" onclick="closeM('m-biz')">✕</button>
+  <h2 id="bizTitle">🏪 Crear negocio</h2>
+  <input id="bName" placeholder="Nombre del negocio">
+  <input id="bDesc" placeholder="Descripción (ej: Tacos mexicanos)">
+  <input id="bImg" placeholder="URL de imagen (opcional)">
+  <input id="bSvc" placeholder="Servicios separados por coma (ej: Delivery propio, Retiro en local)">
+  <button class="btn" style="width:100%" onclick="saveBiz()">Guardar negocio 💾</button>
+</div></div>
+
+<script>
+/* DATOS: restaurantes con menús de 2 precios */
+const IMGS={burger:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&q=60',taco:'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=500&q=60',pizza:'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500&q=60',sushi:'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?w=500&q=60',arepa:'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&q=60',pollo:'https://images.unsplash.com/photo-1562967914-608f82629710?w=500&q=60',helado:'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=500&q=60',perro:'https://images.unsplash.com/photo-1619740455993-9d612177e5b1?w=500&q=60',pasta:'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=500&q=60',jugo:'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=500&q=60'};
+const M=(n,d,l1,p1,l2,p2)=>({n,d,opts:[{l:l1,p:p1},{l:l2,p:p2}],av:true});
+
+let restaurants=[
+{id:1,name:'Burger House 🍔',img:IMGS.burger,desc:'Hamburguesas artesanales',svc:['Delivery propio','Retiro en local'],menu:[M('Hamburguesa Clásica','Carne, queso, lechuga, tomate','Normal',8.5,'Doble',11),M('Papas fritas','Porción con salsas','Pequeña',2.5,'Grande',3.5),M('Combo Burger','Burger + papas + bebida','Individual',10,'Para 2',18)]},
+{id:2,name:'Tacos El Camión 🌮',img:IMGS.taco,desc:'Tacos mexicanos al pastor',svc:['Solo delivery app','Efectivo / Verifone'],menu:[M('Taco al Pastor','Cerdo adobado, piña, cilantro','Por 3',7,'Por 6',12),M('Quesadilla Mixta','Queso, pollo, champiñones','Sencilla',6.5,'Grande',8.5),M('Burrito Grande','Arroz, frijoles, carne','Normal',9,'Con aguacate',10.5)]},
+{id:3,name:'Pizza Nonna 🍕',img:IMGS.pizza,desc:'Pizzas al horno de piedra',svc:['Delivery propio'],menu:[M('Pizza Margarita','Tomate, mozzarella, albahaca','Mediana',10,'Grande',14),M('Pizza Pepperoni','Doble pepperoni','Mediana',12.5,'Grande',16.5),M('Pizza 4 Quesos','Cuatro quesos italianos','Mediana',13,'Grande',17)]},
+{id:4,name:'Sushi Roll Express 🍣',img:IMGS.sushi,desc:'Sushi fresco y rolls',svc:['Solo delivery app','Retiro en local'],menu:[M('Roll California','Kanikama, aguacate, pepino','8 piezas',9.5,'12 piezas',13.5),M('Roll Philadelphia','Salmón, queso crema','8 piezas',11,'12 piezas',15.5),M('Nigiri Mixto','Salmón, atún, camarón','6 piezas',12,'10 piezas',18)]},
+{id:5,name:'Arepas Doña Rosa 🫓',img:IMGS.arepa,desc:'Arepas venezolanas rellenas',svc:['Delivery propio','Retiro en local'],menu:[M('Arepa Reina Pepiada','Pollo, aguacate, mayonesa','Normal',6,'Doble queso',7.5),M('Arepa de Pabellón','Carne mechada, caraotas, plátano','Normal',7,'Con queso',8),M('Empanada de Queso','Masa de maíz, queso blanco','Por 3',4.5,'Por 6',8)]},
+{id:6,name:'Pollo Dorado 🍗',img:IMGS.pollo,desc:'Pollo frito crocante',svc:['Delivery propio','Verifone en entrega'],menu:[M('Combo Pollo','Piezas + papas + bebida','2 piezas',7.5,'4 piezas',12),M('Combo Familiar','8 piezas + papas + ensalada','Normal',18,'Con gaseosa 2L',20),M('Alitas Picantes','Salsa buffalo','Por 6',8,'Por 12',14)]},
+{id:7,name:'Heladería Frosty 🍦',img:IMGS.helado,desc:'Helados artesanales',svc:['Solo delivery app'],menu:[M('Copa de Helado','Elige tus sabores','2 sabores',4,'3 sabores',5),M('Milkshake Oreo','Leche, helado, Oreo','Normal',5.5,'Grande',7),M('Paleta Artesanal','Frutas naturales','1 unidad',2.5,'Por 4',8.5)]},
+{id:8,name:'Perro Loco 🌭',img:IMGS.perro,desc:'Perros calientes y salchipapas',svc:['Retiro en local','Delivery propio'],menu:[M('Perro Caliente','Salchicha, papas, salsas','Sencillo',4,'Con tocineta',5.5),M('Salchipapa','Salchicha, papas, salsas','Normal',5,'Mixta con huevo',6),M('Tocino Lovers','Perro + salchipapa con tocineta','Individual',7,'Para 2',12)]},
+{id:9,name:'Pasta Bella 🍝',img:IMGS.pasta,desc:'Pastas italianas',svc:['Delivery propio','Solo delivery app'],menu:[M('Spaghetti Bolognesa','Salsa de carne al tomate','Individual',9,'Familiar',15),M('Fettuccine Alfredo','Salsa blanca, pollo, parmesano','Individual',10.5,'Familiar',17),M('Lasaña de la Casa','Pasta, carne, bechamel','Porción',11.5,'Grande',16)]},
+{id:10,name:'Jugos Naturalia 🧃',img:IMGS.jugo,desc:'Jugos naturales y batidos',svc:['Retiro en local'],menu:[M('Jugo de Naranja','Exprimido al momento','500ml',3,'1 litro',5),M('Batido de Fresa','Fresa, leche, miel','Normal',4,'Grande',5.5),M('Smoothie Verde','Espinaca, piña, jengibre','Normal',4.5,'Grande',6)]}
+];
+
+let orders=[],cart=[],myDeliveries=[],notifications=[],notifCount=0,role='cliente',currentRest=null,editDish=null,orderSeq=1000,nextRestId=11;
+let currentUser=null,vCode=null,editBiz=false;
+
+/* UTILIDADES */
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Number(n).toFixed(2);
+function toast(msg,type=''){const t=document.createElement('div');t.className='toast '+type;t.innerHTML=msg;document.body.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transition='.4s';setTimeout(()=>t.remove(),400)},4500)}
+function closeM(id){$(id).classList.remove('open')}
+function addNotif(msg){notifications.unshift({msg,t:new Date().toLocaleTimeString()});notifCount++;$('badge').style.display='block';$('badge').textContent=notifCount}
+function toggleNotifs(){$('m-notif').classList.add('open');notifCount=0;$('badge').style.display='none';renderNotifs()}
+function renderNotifs(){$('notifList').innerHTML=notifications.length?notifications.map(n=>`<p style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:.88rem">${n.msg} <span class="mut" style="font-size:.72rem">· ${n.t}</span></p>`).join(''):'<p class="mut">Sin notificaciones.</p>'}
+const stTxt={recibido:'🔴 Recibido',preparacion:'🟡 En preparación',listo:'🔵 Listo p/ entrega',disponible:'🔵 Disponible',aceptado:'🟡 En camino',entregado:'🟢 Entregado'};
+
+/* REGISTRO CLIENTE */
+function openReg(){$('regStep1').style.display='block';$('regStep2').style.display='none';$('m-reg').classList.add('open')}
+function requireUser(){if(currentUser)return true;openReg();toast('👤 Crea tu cuenta para hacer pedidos','warn');return false}
+function sendCode(){const n=$('rName').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim();
+if(!n||!a||!ph)return toast('⚠️ Completa nombre, dirección y teléfono','warn');
+vCode=String(Math.floor(1000+Math.random()*9000));
+$('regStep1').style.display='none';$('regStep2').style.display='block';
+sendSMS(ph,vCode)}
+function verifyCodeFn(){if($('rCode').value.trim()!==vCode)return toast('❌ Código incorrecto, intenta de nuevo','warn');
+currentUser={name:$('rName').value.trim(),addr:$('rAddr').value.trim(),phone:$('rPhone').value.trim()};
+closeM('m-reg');$('userChip').textContent='👤 '+currentUser.name.split(' ')[0];
+$('cName').value=currentUser.name;$('cAddr').value=currentUser.addr;$('cPhone').value=currentUser.phone;
+addNotif(`👋 <b>Bienvenido ${currentUser.name}.</b> Tu cuenta fue verificada ✅`);
+toast(`🎉 <b>¡Cuenta creada!</b> Bienvenido, ${currentUser.name.split(' ')[0]}`,'ok')}
+
+/* ROLES */
+function switchRole(r){role=r;const names={cliente:'Cliente',dueno:'Dueño',repartidor:'Repartidor',admin:'Admin'};document.querySelectorAll('.role-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(names[r])));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('v-'+r).classList.add('active');if(r==='dueno')renderOwner();if(r==='repartidor')renderRepartidor();if(r==='admin')renderAdmin()}
+
+/* CLIENTE */
+function renderRests(){$('restGrid').innerHTML=restaurants.filter(r=>!r.blocked).map(r=>`
+<div class="card" onclick="openRest(${r.id})">
+  <img src="${r.img}" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=🍽️'">
+  <div class="card-body"><h3>${r.name}</h3><p class="mut">${r.desc}</p>
+  ${r.svc.map(s=>`<span class="tag">${s}</span>`).join('')}
+  <p style="margin-top:6px;font-size:.82rem;color:var(--ok)">● Abierto</p></div>
+</div>`).join('')}
+function openRest(id){if(!requireUser())return;currentRest=restaurants.find(r=>r.id===id);cart=[];updateCartBar();
+$('restDetail').innerHTML=`
+  <img src="${currentRest.img}" style="width:100%;height:160px;object-fit:cover;border-radius:12px" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=🍽️'">
+  <h2 style="margin-top:10px">${currentRest.name}</h2>
+  <p class="mut">${currentRest.desc}</p>
+  <p style="margin:6px 0 10px">${currentRest.svc.map(s=>`<span class="tag">${s}</span>`).join('')}</p>
+  <h2>Menú</h2>
+  ${currentRest.menu.filter(m=>m.av).map((m,i)=>`
+  <div class="menu-item">
+    <div class="top"><div class="info"><b>${m.n}</b> <span class="mut" style="font-size:.8rem">${m.d}</span></div></div>
+    ${m.opts.map((o,j)=>`<div class="opt"><span>📦 ${o.l}</span><span><b class="price">${fmt(o.p)}</b> <button class="btn small" onclick="addToCart(${i},${j})">+ Agregar</button></span></div>`).join('')}
+  </div>`).join('')}
+  <button class="btn" style="width:100%;margin-top:14px" onclick="closeM('m-rest');openCart()">Ver carrito 🛒</button>`;
+$('m-rest').classList.add('open')}
+function addToCart(i,j){const m=currentRest.menu.filter(x=>x.av)[i];const o=m.opts[j];
+const ex=cart.find(c=>c.n===m.n&&c.l===o.l);if(ex)ex.q++;else cart.push({n:m.n,l:o.l,p:o.p,q:1});
+updateCartBar();toast(`<b>${m.n}</b> (${o.l}) agregado 🛒`)}
+function updateCartBar(){const t=cart.reduce((s,c)=>s+c.p*c.q,0);$('cartCount').textContent=cart.reduce((s,c)=>s+c.q,0);$('cartTotal').textContent=t.toFixed(2);$('cart').style.display=cart.length?'block':'none'}
+function openCart(){if(!cart.length)return toast('Tu carrito está vacío');
+$('cartDetail').innerHTML=cart.map((c,i)=>`<div class="opt"><span>${c.q}× <b>${c.n}</b> (${c.l})</span><span><b class="price">${fmt(c.p*c.q)}</b> <button class="btn small bad" onclick="cart.splice(${i},1);updateCartBar();openCart()">✕</button></span></div>`).join('')+`<p style="text-align:right;margin-top:10px;font-size:1.1rem"><b>Total: ${fmt(cart.reduce((s,c)=>s+c.p*c.q,0))}</b></p>`;
+$('m-cart').classList.add('open')}
+
+/* PEDIDOS + NOTIFICACIONES */
+async function placeOrder(){const n=$('cName').value.trim(),a=$('cAddr').value.trim(),ph=$('cPhone').value.trim();
+if(!n||!a||!ph)return toast('⚠️ Completa nombre, dirección y teléfono','warn');
+const o={id:++orderSeq,rest:currentRest.name,restId:currentRest.id,client:n,phone:ph,addr:a,pay:$('cPay').value,items:cart.map(c=>({...c})),total:cart.reduce((s,c)=>s+c.p*c.q,0),status:'recibido',t:new Date().toLocaleTimeString()};
+try{const saved=await api('/api/orders',{method:'POST',body:JSON.stringify(o)});Object.assign(o,saved)}catch(e){toast('No se pudo registrar el pedido: '+e.message,'warn');return}
+orders.push(o);closeM('m-cart');cart=[];updateCartBar();
+/* 1. Notificaciones: al negocio y a repartidores */
+addNotif(`✅ <b>Pedido #${o.id} confirmado.</b> Tu orden fue enviada a ${o.rest}.`);
+notifyBusiness(o,'📥 <b>Nuevo pedido #'+o.id+'</b> de '+o.client+' · '+fmt(o.total)+' · '+o.pay);
+notifyDrivers(o);
+toast(`🚀 <b>Pedido #${o.id} realizado.</b> Notificamos al negocio y a los repartidores.`,'ok');
+renderMyOrders();
+setTimeout(()=>{if(o.status==='recibido'){o.status='preparacion';addNotif(`👨‍🍳 <b>Pedido #${o.id}:</b> ${o.rest} está preparando tu orden.`);if(role==='cliente')renderMyOrders();if(role==='dueno')renderOwnerOrders()}},6000);
+setTimeout(()=>{if(o.status==='preparacion'){o.status='listo';notifyBusiness(o,'🔔 <b>Pedido #'+o.id+' listo</b> para recoger por repartidor.');notifyDrivers(o)}},14000)}
+function notifyBusiness(o,msg){addNotif(msg);if(role==='dueno')renderOwnerOrders();toast(msg)}
+function notifyDrivers(o){addNotif(`🛵 <b>Pedido disponible #${o.id}</b> — ${o.rest} → ${o.addr} · ${fmt(o.total)} · ${o.pay}`);if(role==='repartidor')renderRepartidor()}
+function renderMyOrders(){$('myOrders').innerHTML=orders.length?orders.slice().reverse().map(o=>`
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem">
+<b>#${o.id}</b> · ${o.rest} · ${fmt(o.total)} · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span>
+${o.pay==='Efectivo'?'<span class="tag">💵 Efectivo</span>':'<span class="tag">💳 Verifone en entrega</span>'}
+<button class="hist" onclick="alert('${o.items.map(i=>i.q+'× '+i.n+' ('+i.l+')').join('\\n')}')">ver detalle</button></p>`).join(''):'<p class="mut">Aún no has hecho pedidos.</p>'}
+
+/* DUEÑO */
+function renderOwner(){const sel=$('ownerSel');const prev=sel.value;
+sel.innerHTML=restaurants.map(r=>`<option value="${r.id}">${r.name}${r.blocked?' ⛔':''}</option>`).join('');
+if(prev&&restaurants.some(x=>x.id==prev))sel.value=prev;
+const r=restaurants.find(x=>x.id==sel.value)||restaurants[0];sel.value=r.id;
+$('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por el administrador</span>':''} — ${r.desc}</p><p class="mut" style="margin-top:4px">Servicios: ${r.svc.join(' · ')}</p>`;
+renderOwnerOrders();renderOwnerMenu(r)}
+function renderOwnerOrders(){const sel=$('ownerSel');const mine=orders.filter(o=>o.restId==sel.value&&o.status!=='entregado');
+$('ownerOrders').innerHTML=mine.length?mine.map(o=>`
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem">
+<b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]}</span><br>
+<span class="mut" style="font-size:.82rem">${o.items.map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>
+${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}
+${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}
+${o.status==='listo'?'<span class="mut" style="font-size:.82rem">Esperando repartidor…</span>':''}
+${o.status==='aceptado'?`<button class="btn small ok" onclick="setStatus(${o.id},'entregado')">Confirmar entrega 🎉</button>`:''}
+</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>'}
+function renderOwnerMenu(r){$('ownerMenu').innerHTML=r.menu.map((m,i)=>`
+<div class="menu-item"><div class="top"><div class="info"><b>${m.n}</b> ${m.av?'':'<span class="status st-recibido">agotado</span>'}<br><span class="mut" style="font-size:.8rem">${m.d}</span></div></div>
+${m.opts.map(o=>`<div class="opt"><span>📦 ${o.l}</span><b class="price">${fmt(o.p)}</b></div>`).join('')}
+<div class="row" style="margin-top:6px">
+<button class="btn small ghost" onclick="editDish=${i};$('dishTitle').textContent='✏️ Editar plato';$('dName').value='${m.n}';$('dDesc').value='${m.d}';$('dL1').value='${m.opts[0].l}';$('dP1').value=${m.opts[0].p};$('dL2').value='${m.opts[1].l}';$('dP2').value=${m.opts[1].p};$('m-dish').classList.add('open')">✏️ Editar</button>
+<button class="btn small ${m.av?'warn':'ok'}" onclick="toggleDish(${r.id},${i})">${m.av?'Agotar':'Activar'}</button>
+</div></div>`).join('')}
+function toggleDish(rid,i){const r=restaurants.find(x=>x.id===rid);r.menu[i].av=!r.menu[i].av;renderOwnerMenu(r);toast(`<b>${r.menu[i].n}</b> ${r.menu[i].av?'activado ✅':'marcado agotado'}`)}
+function openDishForm(){editDish=null;$('dishTitle').textContent='🍽️ Nuevo plato';['dName','dDesc','dL1','dP1','dL2','dP2'].forEach(i=>$(i).value='');$('m-dish').classList.add('open')}
+function saveDish(){const n=$('dName').value.trim(),d=$('dDesc').value.trim(),l1=$('dL1').value.trim()||'Normal',p1=parseFloat($('dP1').value),l2=$('dL2').value.trim()||'Grande',p2=parseFloat($('dP2').value);
+if(!n||!p1)return toast('⚠️ Nombre y precio 1 son obligatorios','warn');
+if(!p2)p2=p1;
+const r=restaurants.find(x=>x.id==$('ownerSel').value);
+const item={n,d:d||'—',opts:[{l:l1,p:p1},{l:l2,p:p2}],av:true};
+if(editDish===null){r.menu.push(item);toast(`✅ <b>${n}</b> agregado al menú de ${r.name}`,'ok')}else{item.av=r.menu[editDish].av;r.menu[editDish]=item;toast('✅ Plato actualizado','ok')}
+closeM('m-dish');renderOwnerMenu(r)}
+
+/* NEGOCIOS: crear y modificar */
+function openBizForm(isEdit){editBiz=isEdit;const r=restaurants.find(x=>x.id==$('ownerSel').value)||restaurants[0];
+$('bizTitle').textContent=isEdit?'✏️ Modificar negocio':'🏪 Crear negocio';
+$('bName').value=isEdit?r.name:'';$('bDesc').value=isEdit?r.desc:'';$('bImg').value='';$('bSvc').value=isEdit?r.svc.join(', '):'';
+$('m-biz').classList.add('open')}
+function saveBiz(){const n=$('bName').value.trim(),d=$('bDesc').value.trim(),img=$('bImg').value.trim(),sv=$('bSvc').value.split(',').map(s=>s.trim()).filter(Boolean);
+if(!n)return toast('⚠️ El nombre del negocio es obligatorio','warn');
+if(editBiz){const r=restaurants.find(x=>x.id==$('ownerSel').value);r.name=n;r.desc=d||r.desc;if(img)r.img=img;if(sv.length)r.svc=sv;toast(`✅ Negocio <b>${n}</b> actualizado`,'ok')}
+else{restaurants.push({id:++nextRestId,name:n,img:img||IMGS.burger,desc:d||'Nuevo negocio',svc:sv.length?sv:['Delivery propio'],menu:[M('Plato de bienvenida','Edita este plato desde tu panel','Normal',5,'Grande',8)]});toast(`🏪 <b>${n}</b> creado con éxito. Ya aparece para los clientes.`,'ok')}
+closeM('m-biz');renderRests();renderOwner()}
+
+function setStatus(id,st){const o=orders.find(x=>x.id===id);o.status=st;
+if(st==='preparacion')addNotif(`👨‍🍳 <b>Pedido #${id}:</b> ${o.rest} confirmó tu orden y está en preparación.`);
+if(st==='listo')notifyDrivers(o);
+if(st==='entregado'){addNotif(`🎉 <b>Pedido #${id} entregado.</b> ¡Gracias por tu compra!`);myDeliveries.push(o);toast('🎉 Pedido entregado. ¡Buen provecho!','ok')}
+renderOwnerOrders();if(role==='cliente')renderMyOrders();if(role==='repartidor')renderRepartidor()}
+function cancelOrder(id){orders=orders.filter(o=>o.id!==id);addNotif(`❌ <b>Pedido #${id} rechazado</b> por el restaurante.`);renderOwnerOrders();if(role==='cliente')renderMyOrders()}
+
+/* REPARTIDOR */
+function renderRepartidor(){const av=$('avail').checked;const avail=orders.filter(o=>o.status==='listo');
+$('availOrders').innerHTML=av?(avail.length?avail.map(o=>`
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem">
+<b>#${o.id}</b> · <span class="status st-disponible">Disponible</span><br>
+📍 Recoger: <b>${o.rest}</b><br>🏠 Entregar: ${o.addr} (${o.client} · ${o.phone})<br>💰 Total a cobrar: <b>${fmt(o.total)}</b> · ${o.pay}
+<button class="btn small ok" style="margin-top:6px" onclick="acceptOrder(${o.id})">Aceptar pedido 🛵</button></p>`).join(''):'<p class="mut">No hay pedidos disponibles por ahora.</p>'):'<p class="mut">Estás <b>desconectado</b>. Activa la disponibilidad para recibir pedidos.</p>';
+$('myDeliveries').innerHTML=myDeliveries.length?myDeliveries.map(o=>`
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.rest} → ${o.addr} · ${fmt(o.total)} <span class="status st-entregado">${stTxt.entregado}</span></p>`).join(''):'<p class="mut">Aún no has hecho entregas.</p>'}
+function acceptOrder(id){const o=orders.find(x=>x.id===id);o.status='aceptado';
+/* 2. Repartidor acepta → notificación al negocio */
+notifyBusiness(o,`🛵 <b>Repartidor asignado al pedido #${id}.</b> Ya va en camino a ${o.rest} a recoger.`);
+/* 3. Pedido sale → notificación al cliente */
+addNotif(`🛵 <b>¡Tu pedido #${id} va en camino!</b> El repartidor salió de ${o.rest} hacia tu dirección. Pago: ${o.pay}.`);
+toast(`✅ <b>Pedido #${id} aceptado.</b> Dirígete a ${o.rest} a recoger.`,'ok');
+renderRepartidor();if(role==='cliente')renderMyOrders()}
+
+/* ADMINISTRADOR */
+function renderAdmin(){$('adminStats').innerHTML=`🏪 <b>${restaurants.length}</b> negocios registrados · 📦 <b>${orders.length}</b> pedidos realizados`;
+$('adminList').innerHTML=restaurants.map(r=>`
+<div class="menu-item"><div class="top"><div class="info"><b>${r.name}</b> ${r.blocked?'<span class="status st-recibido">⛔ Bloqueado</span>':'<span class="status st-entregado">✅ Activo</span>'}<br><span class="mut" style="font-size:.8rem">${r.desc} · ${r.menu.length} platos · ${r.svc.join(', ')}</span></div></div>
+<div class="row" style="margin-top:6px">
+<button class="btn small ghost" onclick="adminRename(${r.id})">✏️ Cambiar nombre</button>
+<button class="btn small ${r.blocked?'ok':'warn'}" onclick="adminToggle(${r.id})">${r.blocked?'🔓 Desbloquear':'🔒 Bloquear'}</button>
+<button class="btn small bad" onclick="adminDelete(${r.id})">🗑️ Eliminar</button>
+</div></div>`).join('')||'<p class="mut">No hay negocios registrados.</p>'}
+function adminRename(id){const r=restaurants.find(x=>x.id===id);const n=prompt('✏️ Nuevo nombre del negocio:',r.name);
+if(n&&n.trim()){r.name=n.trim();toast(`✅ Negocio renombrado a <b>${r.name}</b>`,'ok');addNotif(`✏️ El administrador renombró un negocio a <b>${r.name}</b>.`);renderAdmin();renderRests();if(role==='dueno')renderOwner()}}
+function adminToggle(id){const r=restaurants.find(x=>x.id===id);r.blocked=!r.blocked;
+toast(r.blocked?`⛔ <b>${r.name}</b> bloqueado. Ya no aparece a los clientes.`:`🔓 <b>${r.name}</b> desbloqueado. Ya es visible para los clientes.`,r.blocked?'warn':'ok');
+addNotif(r.blocked?`⛔ El administrador bloqueó a <b>${r.name}</b>.`:`🔓 El administrador desbloqueó a <b>${r.name}</b>.`);
+renderAdmin();renderRests();if(role==='dueno')renderOwner()}
+function adminDelete(id){const r=restaurants.find(x=>x.id===id);
+if(!confirm(`¿Eliminar definitivamente el negocio "${r.name}"? Esta acción no se puede deshacer.`))return;
+restaurants=restaurants.filter(x=>x.id!==id);
+toast(`🗑️ Negocio <b>${r.name}</b> eliminado`,'ok');
+addNotif(`🗑️ El administrador eliminó el negocio <b>${r.name}</b>.`);
+renderAdmin();renderRests();if(role==='dueno')renderOwner()}
+
+/* SMS: aquí se conectará el servicio real (Twilio/Firebase) en el backend.
+   Por ahora la función simula el envío mostrando el código en pantalla. */
+function sendSMS(phone,code){vCode=code;
+const box=document.getElementById('smsBox');
+if(box)box.innerHTML='📱 <b>SMS (demo)</b> a '+phone+'<br>Tu código de verificación es: <b style="font-size:1.4rem;letter-spacing:3px;color:var(--p)">'+code+'</b>';
+toast('📱 Código enviado a '+phone,'ok')}
+
+/* CAPA PROFESIONAL: persistencia local, cuentas, GPS y comisiones.
+   La persistencia y las cuentas de esta versión son locales al navegador; para producción se necesita backend seguro. */
+const DB_KEY='foodtrack_pro_token';
+let driverWatch=null,driverCoords=null,saveTimer=null;
+let API_TOKEN=localStorage.getItem(DB_KEY)||'';
+async function api(path,options={}){
+  const headers={'Content-Type':'application/json',...(options.headers||{})};
+  if(API_TOKEN)headers.Authorization='Bearer '+API_TOKEN;
+  const response=await fetch(path,{...options,headers});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||'Error de conexión con el servidor');
+  return data;
+}
+function persist(){
+  if(!API_TOKEN || currentUser?.role==='cliente')return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    try{await api('/api/state',{method:'PUT',body:JSON.stringify({restaurants,orders,myDeliveries,notifications,orderSeq,nextRestId,notifCount})});}
+    catch(e){console.error('No se pudo sincronizar con PostgreSQL:',e);toast('⚠️ No se pudo guardar en el servidor: '+e.message,'warn');}
+  },350);
+}
+async function initRemote(){
+  try{
+    if(API_TOKEN){
+      const me=await api('/api/me');currentUser=me.user;
+      const d=await api('/api/state');
+      if(Array.isArray(d.restaurants))restaurants=d.restaurants;
+      if(Array.isArray(d.orders))orders=d.orders;
+      if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;
+      if(Array.isArray(d.notifications))notifications=d.notifications;
+      if(Number.isFinite(d.orderSeq))orderSeq=d.orderSeq;
+      if(Number.isFinite(d.nextRestId))nextRestId=d.nextRestId;
+      if(Number.isFinite(d.notifCount))notifCount=d.notifCount;
+      if(!Array.isArray(d.restaurants)||!d.restaurants.length){await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});}
+      $('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+currentUser.role;
+      $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone||'';
+      if(currentUser.role!=='cliente')switchRole(currentUser.role);
+    }
+    renderRests();renderMyOrders();
+    if(!currentUser)setTimeout(()=>{openReg();toast('👋 Bienvenido a FoodTrack Pro. Inicia sesión o crea una cuenta.')},500);
+  }catch(e){API_TOKEN='';localStorage.removeItem(DB_KEY);currentUser=null;renderRests();renderMyOrders();setTimeout(()=>{openReg();toast('No se pudo recuperar la sesión. Inicia sesión de nuevo.','warn')},500);}
+}
+function showLogin(){$('regStep1').style.display='none';$('regStep2').style.display='none';$('loginPanel').style.display='block'}
+function showRegister(){$('regStep1').style.display='block';$('regStep2').style.display='none';$('loginPanel').style.display='none'}
+openReg=function(){$('m-reg').classList.add('open');showLogin()};
+async function hashPassword(value){if(!crypto.subtle)throw new Error('Usa la aplicación desde HTTPS o localhost para crear contraseñas protegidas.');const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+async function loginAccount(){try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone:$('loginPhone').value.trim(),password:$('loginPassword').value})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;if(!Array.isArray(d.restaurants)||!d.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}}
+function afterLogin(){closeM('m-reg');$('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+currentUser.role; $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone;persist();if(currentUser.role!=='cliente')switchRole(currentUser.role);toast('Bienvenido, '+currentUser.name,'ok')}
+sendCode=async function(){const n=$('rName').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim(),pw=$('rPassword').value;if(!n||!a||!ph||!pw)return toast('Completa nombre, dirección, teléfono y contraseña','warn');if(pw.length<8)return toast('La contraseña debe tener al menos 8 caracteres','warn');try{const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name:n,address:a,phone:ph,password:pw})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const state=await api('/api/state');if(!Array.isArray(state.restaurants)||!state.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();addNotif('Cuenta creada y guardada en la base de datos.');renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}};
+verifyCodeFn=function(){loginAccount()};
+function startDriverGPS(){if(!API_TOKEN)return toast('Inicia sesión como repartidor para compartir GPS','warn');if(!navigator.geolocation)return toast('Este navegador no admite geolocalización','warn');if(!window.isSecureContext)return toast('El GPS requiere HTTPS o localhost','warn');$('gpsState').textContent='Solicitando permiso…';driverWatch=navigator.geolocation.watchPosition(async pos=>{driverCoords={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),at:new Date().toISOString()};$('gpsState').textContent='GPS activo · precisión ±'+driverCoords.accuracy+' m';$('gpsMap').innerHTML='📍 '+driverCoords.lat.toFixed(5)+', '+driverCoords.lng.toFixed(5)+'<br><a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+driverCoords.lat+','+driverCoords.lng+'">Abrir ubicación en Google Maps</a>';try{await api('/api/location',{method:'POST',body:JSON.stringify(driverCoords)})}catch(e){toast('No se pudo enviar la ubicación: '+e.message,'warn')}},err=>{$('gpsState').textContent='No se pudo obtener ubicación';toast(err.message,'warn')},{enableHighAccuracy:true,maximumAge:5000,timeout:15000})}
+function stopDriverGPS(){if(driverWatch!==null)navigator.geolocation.clearWatch(driverWatch);driverWatch=null;$('gpsState').textContent='GPS apagado';}
+function commissionFor(o){return Number(o.total||0)*0.10}
+function renderFinance(){const valid=orders.filter(o=>o.status!=='cancelado');const gross=valid.reduce((s,o)=>s+Number(o.total||0),0),fee=valid.reduce((s,o)=>s+commissionFor(o),0);$('adminFinance').innerHTML='<div class="grid"><div><span class="mut">Ventas registradas</span><h2>'+fmt(gross)+'</h2></div><div><span class="mut">Comisión plataforma (10%)</span><h2 class="price">'+fmt(fee)+'</h2></div><div><span class="mut">Restaurantes (90%)</span><h2>'+fmt(gross-fee)+'</h2></div></div><p class="mut">Cálculo ilustrativo sobre pedidos no cancelados. No procesa cobros ni liquidaciones reales.</p>'}
+const oldRenderAdmin=renderAdmin;renderAdmin=function(){oldRenderAdmin();renderFinance();renderDriverLocations()};
+async function renderDriverLocations(){const box=$('driverLocations');if(!box)return;try{const rows=await api('/api/locations');box.innerHTML=rows.length?rows.map(x=>`<div class="menu-item"><b>${x.name}</b><p class="mut">${Number(x.lat).toFixed(5)}, ${Number(x.lng).toFixed(5)} · precisión ±${x.accuracy||'?'} m</p><a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${x.lat},${x.lng}">Abrir en Google Maps</a><p class="mut">Actualizado: ${new Date(x.recorded_at).toLocaleString()}</p></div>`).join(''):'<p class="mut">Todavía no hay ubicaciones compartidas.</p>'}catch(e){box.innerHTML='<p class="mut">'+e.message+'</p>'}}
+const oldRenderRests=renderRests;renderRests=function(){const q=($('restSearch')?.value||'').toLowerCase(),cat=$('restFilter')?.value||'';$('restGrid').innerHTML=restaurants.filter(r=>!r.blocked&&(!q||(r.name+' '+r.desc+' '+r.menu.map(m=>m.n).join(' ')).toLowerCase().includes(q))&&(!cat||({burger:/burger|hamburg/i,pizza:/pizza/i,taco:/taco|mex/i,sushi:/sushi/i}[cat]).test(r.name+' '+r.desc))).map(r=>`<div class="card" onclick="openRest(${r.id})"><img src="${r.img}" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=FoodTrack'"><div class="card-body"><h3>${r.name}</h3><p class="mut">${r.desc}</p>${r.svc.map(x=>`<span class="tag">${x}</span>`).join('')}<p style="margin-top:8px;color:var(--ok);font-size:.82rem">● Disponible</p></div></div>`).join('')||'<p class="mut">No encontramos restaurantes con esa búsqueda.</p>'};
+function wrapPersist(name){const fn=window[name];if(typeof fn!=='function')return;window[name]=function(...args){const result=fn.apply(this,args);persist();return result}}
+['placeOrder','saveDish','toggleDish','saveBiz','setStatus','cancelOrder','acceptOrder','adminRename','adminToggle','adminDelete','addNotif','toggleNotifs'].forEach(wrapPersist);
+initRemote();
+// Sincroniza pedidos y paneles periódicamente para reflejar cambios de otros usuarios.
+setInterval(async()=>{if(!API_TOKEN)return;try{const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;renderMyOrders();if(role==='cliente')renderRests();if(role==='dueno'){renderOwner();renderOwnerOrders()}if(role==='repartidor')renderRepartidor();if(role==='admin')renderAdmin()}catch(e){console.warn('Sincronización temporalmente no disponible',e)}},15000);
+</script>
+<button id="pwaBtn" onclick="installPWA()" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:250;background:#222;color:#fff;border:none;padding:12px 26px;border-radius:30px;font-weight:bold;box-shadow:0 4px 14px rgba(0,0,0,.3)">⬇️ Instalar app</button>
+<script>
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(function(e){console.log(e)})}
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;var b=document.getElementById('pwaBtn');if(b)b.style.display='block'});
+function installPWA(){if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null}else{alert('Para instalar: toca los 3 puntos (⋮) de Chrome → Instalar app / Agregar a pantalla principal')}}
+</script>
+</body>
+</html>

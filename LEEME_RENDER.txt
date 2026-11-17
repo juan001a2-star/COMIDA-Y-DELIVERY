@@ -1,63 +1,43 @@
-FOODTRACK PRO — EDICIÓN RENDER + POSTGRESQL
-============================================
+FOODTRACK PRO — RENDER + POSTGRESQL (CORRECCIÓN DE ACCESOS Y NEGOCIOS)
+======================================================================
 
-QUÉ INCLUYE
-- Aplicación web FoodTrack Pro original, adaptada para usar una API.
-- Servidor Node.js + Express.
-- Base de datos PostgreSQL persistente.
-- Registro público de clientes e inicio de sesión.
-- Contraseñas cifradas con bcrypt (hash en el servidor).
-- Sesiones JWT.
-- Pedidos guardados en PostgreSQL y vinculados al teléfono de la cuenta.
-- Estado compartido de restaurantes, menús, pedidos y administración.
-- Ubicaciones GPS de repartidores guardadas en una tabla PostgreSQL.
-- Configuración Blueprint para crear Web Service y PostgreSQL en Render.
-- Service Worker actualizado para no interceptar llamadas /api.
+CAMBIOS DE ESTA VERSIÓN
+- Inicio de sesión por nombre de usuario o teléfono + contraseña.
+- El rol se obtiene exclusivamente de la cuenta autenticada. Ya no existe un selector superior para fingir ser cliente, dueño, repartidor o administrador.
+- El administrador inicial se crea con ADMIN_USERNAME (por defecto: admin), ADMIN_PHONE y ADMIN_PASSWORD.
+- El administrador puede crear cuentas de dueño y repartidor desde su panel, indicando nombre de usuario y contraseña.
+- El administrador también puede asignar negocios de demostración ya existentes a una cuenta de dueño desde su panel.
+- El registro público solo crea clientes.
+- Cada negocio creado por un dueño queda asignado a su ID de usuario.
+- Cada dueño solo recibe, ve y modifica sus propios negocios, menús y pedidos.
+- Los cambios de nombre, descripción, servicios, platos, precios y disponibilidad se guardan inmediatamente en PostgreSQL.
+- Los negocios recién creados se guardan en PostgreSQL y aparecen en el catálogo de clientes.
+- Se añadió migración automática de la columna username para bases de datos ya existentes.
+- Se cambió la versión de caché del Service Worker para que los navegadores descarguen la nueva interfaz.
 
-IMPORTANTE SOBRE SEGURIDAD Y ALCANCE
-Esta entrega es una base funcional de despliegue y persistencia, no una plataforma de pagos lista para producción.
-- El registro público crea únicamente cuentas de cliente. El administrador inicial se crea con ADMIN_PHONE y ADMIN_PASSWORD.
-- Las cuentas de dueño y repartidor se crean mediante /api/admin/users (ver ejemplo abajo).
-- El estado de negocio es compartido. La autorización por rol es básica: clientes solo pueden crear pedidos y ver los suyos; admin/dueno/repartidor pueden modificar el estado general. Antes de abrir el servicio al público, hay que limitar los datos y las modificaciones de dueños a su propio restaurante y los repartidores a sus pedidos asignados.
-- La ubicación GPS se registra cuando el repartidor abre la app y activa el GPS; no es seguimiento en segundo plano. La ruta /api/locations está disponible para administrador/dueño.
-- No hay pasarela de pago conectada ni liquidación real de comisiones. Los porcentajes siguen siendo cálculos informativos.
-- Los pedidos de demostración no deben tratarse como cobros reales.
+DESPLIEGUE / ACTUALIZACIÓN EN RENDER
+1. Descomprime el ZIP.
+2. Sube el contenido de esta carpeta a la raíz de tu repositorio GitHub (server.js, package.json, index.html y render.yaml deben quedar en la raíz).
+3. Haz commit y push a GitHub.
+4. En Render, abre el servicio foodtrack-pro y confirma que está conectado al repositorio. Render debe iniciar un nuevo deploy al detectar el commit.
+5. En Environment comprueba que existan DATABASE_URL, JWT_SECRET, ADMIN_USERNAME, ADMIN_PHONE y ADMIN_PASSWORD. No cambies DATABASE_URL ni JWT_SECRET si ya tienes datos/cuentas funcionando.
+6. Espera a que el deploy termine y visita /api/health. Debe responder {"ok":true,"database":"connected"}.
 
-DESPLIEGUE EN RENDER
-1. Descomprime este ZIP. La carpeta foodtrack contiene el proyecto completo.
-2. Sube el contenido de la carpeta foodtrack a un repositorio GitHub (los archivos package.json, server.js y render.yaml deben quedar en la raíz del repositorio).
-3. En Render, selecciona New + > Blueprint y conecta ese repositorio.
-4. Render leerá render.yaml y creará el servicio web y la base PostgreSQL.
-5. Cuando Render pida ADMIN_PHONE y ADMIN_PASSWORD, introduce el teléfono del administrador y una contraseña larga (mínimo 12 caracteres recomendado). No compartas estos datos.
-6. Espera a que termine el despliegue y abre la URL *.onrender.com del servicio.
-7. Comprueba https://TU-SERVICIO.onrender.com/api/health. Debe responder: {"ok":true,"database":"connected"}.
+PRIMER ACCESO
+- Administrador: usuario `admin` (o el valor configurado en ADMIN_USERNAME), contraseña ADMIN_PASSWORD.
+- Entra como administrador y crea una cuenta para cada dueño desde “Crear cuenta de dueño o repartidor”.
+- El dueño entra con el nombre de usuario y contraseña que le entregaste.
+- Dentro de su panel puede crear su negocio, modificarlo y administrar sus platos y precios.
+- El cliente se registra desde “Crear cuenta de cliente” y luego entra con su usuario y contraseña.
 
-VARIABLES DE ENTORNO
-Render configura automáticamente DATABASE_URL y genera JWT_SECRET mediante render.yaml.
-Configura manualmente:
-- ADMIN_PHONE: teléfono del administrador, en formato internacional preferiblemente.
-- ADMIN_PASSWORD: contraseña fuerte del administrador.
+IMPORTANTE SOBRE CUENTAS EXISTENTES
+- La migración asigna como username el teléfono de las cuentas antiguas que no tenían nombre de usuario. Por eso, esas cuentas pueden iniciar sesión usando el teléfono como usuario.
+- Si ADMIN_USERNAME está configurado como `admin`, el administrador puede entrar con `admin` y la contraseña configurada en ADMIN_PASSWORD.
+- Los restaurantes de demostración antiguos quedan sin propietario asignado y siguen visibles para clientes y administrables por el administrador. Cada dueño puede crear su propio restaurante desde su panel.
+- Las contraseñas nunca se guardan en texto plano; el servidor guarda hashes bcrypt.
 
-CREAR CUENTAS DE DUEÑO O REPARTIDOR
-Primero inicia sesión como administrador y copia el token JWT desde la respuesta de /api/auth/login (no lo publiques ni lo compartas). Luego ejecuta desde una terminal, reemplazando URL, TOKEN y datos:
-
-curl -X POST "https://TU-SERVICIO.onrender.com/api/admin/users" \
-  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
-  -d '{"name":"Nombre del restaurante o repartidor","address":"Dirección","phone":"+596000000000","password":"UnaClaveFuerte123","role":"dueno"}'
-
-Para un repartidor, cambia role por "repartidor".
-
-ENDPOINTS PRINCIPALES
-GET  /api/health       Estado del servidor y PostgreSQL
-POST /api/auth/register Registro público de clientes
-POST /api/auth/login   Inicio de sesión
-GET  /api/me           Cuenta autenticada
-GET  /api/state        Datos de la aplicación
-PUT  /api/state        Guardar estado (admin, dueño o repartidor)
-POST /api/orders       Crear pedido (cliente)
-POST /api/location     Guardar GPS (repartidor/admin)
-GET  /api/locations    Consultar ubicaciones (admin/dueño)
-POST /api/admin/users  Crear dueño/repartidor (admin)
-
-COPIAS DE SEGURIDAD
-En Render configura copias de seguridad de la base PostgreSQL según el plan contratado. No dependas del almacenamiento del sistema de archivos del servicio web: la persistencia vive en PostgreSQL.
+BASE DE DATOS Y ALCANCE
+- PostgreSQL guarda cuentas, estado de restaurantes/menús/pedidos y ubicaciones GPS.
+- La aplicación no procesa pagos reales ni liquida automáticamente las comisiones.
+- El GPS requiere permiso del navegador y HTTPS; se comparte mientras el repartidor mantiene activa la aplicación.
+- Configura backups de PostgreSQL desde Render para proteger la información.

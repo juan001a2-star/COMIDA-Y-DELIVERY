@@ -76,12 +76,9 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
 <header>
   <h1>🍔 FoodTrack Pro</h1>
   <div class="roles">
-    <button class="role-btn active" onclick="switchRole('cliente')">👤 Cliente</button>
-    <button class="role-btn" onclick="switchRole('dueno')">🏪 Dueño</button>
-    <button class="role-btn" onclick="switchRole('repartidor')">🛵 Repartidor</button>
-    <button class="role-btn" onclick="switchRole('admin')">🛡️ Admin</button>
-    <button class="bell" onclick="toggleNotifs()">🔔<span class="badge" id="badge">0</span></button>
+    <button class="bell" id="bellBtn" onclick="toggleNotifs()" style="display:none">🔔<span class="badge" id="badge">0</span></button>
     <span class="user-chip" id="userChip" onclick="openReg()">Iniciar sesión</span>
+    <button class="role-btn" id="logoutBtn" onclick="logoutAccount()" style="display:none">Cerrar sesión</button>
   </div>
 </header>
 
@@ -102,7 +99,7 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   <div class="panel">
     <div class="row" style="justify-content:space-between">
       <h2>🏪 Panel del dueño</h2>
-      <select id="ownerSel" onchange="renderOwner()" style="width:auto;min-width:200px;margin:0"></select>
+      <select id="ownerSel" onchange="renderOwner()" style="width:auto;min-width:200px;margin:0;display:none"></select>
     </div>
     <div id="ownerInfo"></div>
     <div class="row" style="margin-top:10px">
@@ -148,6 +145,21 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   </div>
   <div class="panel"><h2>💰 Comisiones y ganancias</h2><div id="adminFinance"></div></div>
   <div class="panel"><div class="row" style="justify-content:space-between"><h2>📍 Ubicaciones de repartidores</h2><button class="btn small ghost" onclick="renderDriverLocations()">Actualizar GPS</button></div><div id="driverLocations"><p class="mut">Pulsa actualizar para consultar las ubicaciones.</p></div></div>
+  <div class="panel">
+    <h2>👥 Crear cuenta de dueño o repartidor</h2>
+    <input id="uName" placeholder="Nombre completo">
+    <input id="uUsername" placeholder="Nombre de usuario único">
+    <input id="uPhone" placeholder="Teléfono">
+    <input id="uAddress" placeholder="Dirección (opcional)">
+    <input id="uPassword" type="password" placeholder="Contraseña (mínimo 8 caracteres)">
+    <select id="uRole"><option value="dueno">Dueño de restaurante</option><option value="repartidor">Repartidor</option></select>
+    <button class="btn" onclick="adminCreateUser()">Crear cuenta</button>
+    <div id="adminUsers" style="margin-top:12px"></div>
+    <h3 style="margin-top:18px">Asignar un negocio existente a un dueño</h3>
+    <select id="assignRest"></select>
+    <select id="assignOwner"></select>
+    <button class="btn small" onclick="assignExistingRestaurant()">Asignar negocio</button>
+  </div>
   <div class="panel">
     <h2>🏪 Todos los negocios</h2>
     <div id="adminList"></div>
@@ -201,10 +213,11 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   <div id="regStep1">
     <h2>👤 Crear tu cuenta</h2>
     <input id="rName" placeholder="Nombre completo">
+    <input id="rUsername" placeholder="Nombre de usuario (ej. maria23)">
     <input id="rAddr" placeholder="Dirección">
     <input id="rPhone" type="tel" placeholder="Teléfono">
     <input id="rPassword" type="password" placeholder="Contraseña (mínimo 8 caracteres)" autocomplete="new-password">
-    <select id="rRole" disabled><option value="cliente">Crear cuenta de cliente</option></select><small class="mut">Las cuentas de restaurantes y repartidores las habilita el administrador.</small>
+    <select id="rRole" disabled><option value="cliente">Crear cuenta de cliente</option></select><small class="mut">Las cuentas de dueño y repartidor las crea el administrador. El rol se asigna automáticamente al iniciar sesión.</small>
     <button class="btn" style="width:100%" onclick="sendCode()">Crear cuenta</button><p class="mut" style="margin-top:10px">¿Ya tienes cuenta? <button class="hist" onclick="showLogin()">Iniciar sesión</button></p>
   </div>
   <div id="regStep2" style="display:none">
@@ -215,7 +228,7 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
     <button class="btn" style="width:100%" onclick="verifyCodeFn()">Verificar ✅</button>
     <button class="btn ghost" style="width:100%;margin-top:8px" onclick="sendCode()">Reenviar código 🔁</button>
   </div>
-<div id="loginPanel" style="display:none"><h2>🔐 Iniciar sesión</h2><input id="loginPhone" type="tel" placeholder="Teléfono"><input id="loginPassword" type="password" placeholder="Contraseña"><button class="btn" style="width:100%" onclick="loginAccount()">Entrar</button><p class="mut" style="margin-top:10px">¿No tienes cuenta? <button class="hist" onclick="showRegister()">Crear cuenta</button></p></div>
+<div id="loginPanel" style="display:none"><h2>🔐 Iniciar sesión</h2><input id="loginPhone" autocomplete="username" placeholder="Nombre de usuario"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="Contraseña"><button class="btn" style="width:100%" onclick="loginAccount()">Entrar</button><p class="mut" style="margin-top:10px">¿No tienes cuenta de cliente? <button class="hist" onclick="showRegister()">Crear cuenta</button></p></div>
 </div></div>
 
 <!-- MODAL negocio -->
@@ -276,7 +289,7 @@ addNotif(`👋 <b>Bienvenido ${currentUser.name}.</b> Tu cuenta fue verificada �
 toast(`🎉 <b>¡Cuenta creada!</b> Bienvenido, ${currentUser.name.split(' ')[0]}`,'ok')}
 
 /* ROLES */
-function switchRole(r){role=r;const names={cliente:'Cliente',dueno:'Dueño',repartidor:'Repartidor',admin:'Admin'};document.querySelectorAll('.role-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(names[r])));document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('v-'+r).classList.add('active');if(r==='dueno')renderOwner();if(r==='repartidor')renderRepartidor();if(r==='admin')renderAdmin()}
+function switchRole(r){if(!currentUser||currentUser.role!==r){toast('El acceso se determina por tu cuenta. Inicia sesión con el usuario correspondiente.','warn');return}role=r;document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('v-'+r).classList.add('active');if(r==='dueno')renderOwner();if(r==='repartidor')renderRepartidor();if(r==='admin')renderAdmin();if(r==='cliente')renderRests()}
 
 /* CLIENTE */
 function renderRests(){$('restGrid').innerHTML=restaurants.filter(r=>!r.blocked).map(r=>`
@@ -330,57 +343,44 @@ function renderMyOrders(){$('myOrders').innerHTML=orders.length?orders.slice().r
 ${o.pay==='Efectivo'?'<span class="tag">💵 Efectivo</span>':'<span class="tag">💳 Verifone en entrega</span>'}
 <button class="hist" onclick="alert('${o.items.map(i=>i.q+'× '+i.n+' ('+i.l+')').join('\\n')}')">ver detalle</button></p>`).join(''):'<p class="mut">Aún no has hecho pedidos.</p>'}
 
-/* DUEÑO */
-function renderOwner(){const sel=$('ownerSel');const prev=sel.value;
-sel.innerHTML=restaurants.map(r=>`<option value="${r.id}">${r.name}${r.blocked?' ⛔':''}</option>`).join('');
-if(prev&&restaurants.some(x=>x.id==prev))sel.value=prev;
-const r=restaurants.find(x=>x.id==sel.value)||restaurants[0];sel.value=r.id;
-$('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por el administrador</span>':''} — ${r.desc}</p><p class="mut" style="margin-top:4px">Servicios: ${r.svc.join(' · ')}</p>`;
-renderOwnerOrders();renderOwnerMenu(r)}
-function renderOwnerOrders(){const sel=$('ownerSel');const mine=orders.filter(o=>o.restId==sel.value&&o.status!=='entregado');
-$('ownerOrders').innerHTML=mine.length?mine.map(o=>`
-<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem">
-<b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]}</span><br>
-<span class="mut" style="font-size:.82rem">${o.items.map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>
-${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}
-${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}
-${o.status==='listo'?'<span class="mut" style="font-size:.82rem">Esperando repartidor…</span>':''}
-${o.status==='aceptado'?`<button class="btn small ok" onclick="setStatus(${o.id},'entregado')">Confirmar entrega 🎉</button>`:''}
-</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>'}
-function renderOwnerMenu(r){$('ownerMenu').innerHTML=r.menu.map((m,i)=>`
-<div class="menu-item"><div class="top"><div class="info"><b>${m.n}</b> ${m.av?'':'<span class="status st-recibido">agotado</span>'}<br><span class="mut" style="font-size:.8rem">${m.d}</span></div></div>
-${m.opts.map(o=>`<div class="opt"><span>📦 ${o.l}</span><b class="price">${fmt(o.p)}</b></div>`).join('')}
-<div class="row" style="margin-top:6px">
-<button class="btn small ghost" onclick="editDish=${i};$('dishTitle').textContent='✏️ Editar plato';$('dName').value='${m.n}';$('dDesc').value='${m.d}';$('dL1').value='${m.opts[0].l}';$('dP1').value=${m.opts[0].p};$('dL2').value='${m.opts[1].l}';$('dP2').value=${m.opts[1].p};$('m-dish').classList.add('open')">✏️ Editar</button>
-<button class="btn small ${m.av?'warn':'ok'}" onclick="toggleDish(${r.id},${i})">${m.av?'Agotar':'Activar'}</button>
-</div></div>`).join('')}
-function toggleDish(rid,i){const r=restaurants.find(x=>x.id===rid);r.menu[i].av=!r.menu[i].av;renderOwnerMenu(r);toast(`<b>${r.menu[i].n}</b> ${r.menu[i].av?'activado ✅':'marcado agotado'}`)}
-function openDishForm(){editDish=null;$('dishTitle').textContent='🍽️ Nuevo plato';['dName','dDesc','dL1','dP1','dL2','dP2'].forEach(i=>$(i).value='');$('m-dish').classList.add('open')}
-function saveDish(){const n=$('dName').value.trim(),d=$('dDesc').value.trim(),l1=$('dL1').value.trim()||'Normal',p1=parseFloat($('dP1').value),l2=$('dL2').value.trim()||'Grande',p2=parseFloat($('dP2').value);
-if(!n||!p1)return toast('⚠️ Nombre y precio 1 son obligatorios','warn');
-if(!p2)p2=p1;
-const r=restaurants.find(x=>x.id==$('ownerSel').value);
-const item={n,d:d||'—',opts:[{l:l1,p:p1},{l:l2,p:p2}],av:true};
-if(editDish===null){r.menu.push(item);toast(`✅ <b>${n}</b> agregado al menú de ${r.name}`,'ok')}else{item.av=r.menu[editDish].av;r.menu[editDish]=item;toast('✅ Plato actualizado','ok')}
-closeM('m-dish');renderOwnerMenu(r)}
+/* DUEÑO: el servidor solo entrega y permite modificar los negocios asignados a esta cuenta. */
+function selectedOwnerRestaurant(){return restaurants.find(x=>String(x.id)==String($('ownerSel').value))||restaurants[0]||null}
+function renderOwner(){const sel=$('ownerSel');const mine=restaurants.filter(r=>Number(r.ownerId)===Number(currentUser?.id));sel.innerHTML=mine.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');sel.style.display=mine.length>1?'block':'none';
+ if(!mine.length){$('ownerInfo').innerHTML='<p class="mut">Todavía no tienes un negocio registrado. Crea tu primer restaurante para comenzar.</p>';$('ownerMenu').innerHTML='<p class="mut">Cuando crees tu negocio podrás agregar platos y precios aquí.</p>';$('ownerOrders').innerHTML='<p class="mut">Todavía no hay pedidos.</p>';return;}
+ const prev=sel.value; if(prev&&mine.some(x=>String(x.id)===String(prev)))sel.value=prev;const r=selectedOwnerRestaurant();
+ $('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por el administrador</span>':''} — ${r.desc}</p><p class="mut" style="margin-top:4px">Servicios: ${(r.svc||[]).join(' · ')}</p>`;
+ renderOwnerOrders();renderOwnerMenu(r)}
+function renderOwnerOrders(){const r=selectedOwnerRestaurant();const mine=r?orders.filter(o=>String(o.restId)===String(r.id)&&!['entregado','cancelado'].includes(o.status)):[];
+ $('ownerOrders').innerHTML=mine.length?mine.map(o=>`
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span><br><span class="mut" style="font-size:.82rem">${(o.items||[]).map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}${o.status==='listo'?'<span class="mut" style="font-size:.82rem">Esperando repartidor…</span>':''}${o.status==='aceptado'?`<button class="btn small ok" onclick="setStatus(${o.id},'entregado')">Confirmar entrega 🎉</button>`:''}</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>'}
+function renderOwnerMenu(r){$('ownerMenu').innerHTML=(r.menu||[]).map((m,i)=>`
+<div class="menu-item"><div class="top"><div class="info"><b>${m.n}</b> ${m.av?'':'<span class="status st-recibido">agotado</span>'}<br><span class="mut" style="font-size:.8rem">${m.d||''}</span></div></div>${(m.opts||[]).map(o=>`<div class="opt"><span>📦 ${o.l}</span><b class="price">${fmt(o.p)}</b></div>`).join('')}
+<div class="row" style="margin-top:6px"><button class="btn small ghost" onclick="openEditDish(${i})">✏️ Editar</button><button class="btn small ${m.av?'warn':'ok'}" onclick="toggleDish(${r.id},${i})">${m.av?'Agotar':'Activar'}</button></div></div>`).join('')||'<p class="mut">Todavía no has agregado platos.</p>'}
+function openEditDish(i){const r=selectedOwnerRestaurant();if(!r)return;const m=r.menu[i];editDish=i;$('dishTitle').textContent='✏️ Editar plato';$('dName').value=m.n;$('dDesc').value=m.d||'';$('dL1').value=m.opts?.[0]?.l||'Normal';$('dP1').value=m.opts?.[0]?.p??'';$('dL2').value=m.opts?.[1]?.l||'Grande';$('dP2').value=m.opts?.[1]?.p??'';$('m-dish').classList.add('open')}
+async function saveRestaurantToServer(r){const result=await api('/api/restaurants/'+encodeURIComponent(r.id),{method:'PUT',body:JSON.stringify({name:r.name,desc:r.desc,img:r.img,svc:r.svc,menu:r.menu})});return result.restaurant}
+async function toggleDish(rid,i){try{const r=restaurants.find(x=>String(x.id)===String(rid));if(!r)return;r.menu[i].av=!r.menu[i].av;await saveRestaurantToServer(r);renderOwnerMenu(r);toast(`<b>${r.menu[i].n}</b> ${r.menu[i].av?'activado ✅':'marcado agotado'}`,'ok')}catch(e){toast('No se pudo guardar el plato: '+e.message,'warn')}}
+function openDishForm(){if(!selectedOwnerRestaurant())return toast('Primero crea tu negocio.','warn');editDish=null;$('dishTitle').textContent='🍽️ Nuevo plato';['dName','dDesc','dL1','dP1','dL2','dP2'].forEach(i=>$(i).value='');$('m-dish').classList.add('open')}
+async function saveDish(){try{const n=$('dName').value.trim(),d=$('dDesc').value.trim(),l1=$('dL1').value.trim()||'Normal',p1=Number($('dP1').value),l2=$('dL2').value.trim()||'Grande',p2=$('dP2').value===''?p1:Number($('dP2').value);
+ if(!n||$('dP1').value===''||!Number.isFinite(p1)||p1<0||!Number.isFinite(p2)||p2<0)return toast('Indica el nombre y precios válidos.','warn');
+ const r=selectedOwnerRestaurant();if(!r)return toast('Primero crea tu negocio.','warn');const item={n,d:d||'—',opts:[{l:l1,p:p1},{l:l2,p:p2}],av:true};
+ if(editDish===null)r.menu.push(item);else{item.av=r.menu[editDish]?.av??true;r.menu[editDish]=item;}
+ await saveRestaurantToServer(r);closeM('m-dish');renderOwnerMenu(r);toast(editDish===null?'Plato agregado y guardado.':'Plato actualizado y guardado.','ok');editDish=null;
+ }catch(e){toast('No se pudo guardar el plato: '+e.message,'warn')}}
 
-/* NEGOCIOS: crear y modificar */
-function openBizForm(isEdit){editBiz=isEdit;const r=restaurants.find(x=>x.id==$('ownerSel').value)||restaurants[0];
-$('bizTitle').textContent=isEdit?'✏️ Modificar negocio':'🏪 Crear negocio';
-$('bName').value=isEdit?r.name:'';$('bDesc').value=isEdit?r.desc:'';$('bImg').value='';$('bSvc').value=isEdit?r.svc.join(', '):'';
-$('m-biz').classList.add('open')}
-function saveBiz(){const n=$('bName').value.trim(),d=$('bDesc').value.trim(),img=$('bImg').value.trim(),sv=$('bSvc').value.split(',').map(s=>s.trim()).filter(Boolean);
-if(!n)return toast('⚠️ El nombre del negocio es obligatorio','warn');
-if(editBiz){const r=restaurants.find(x=>x.id==$('ownerSel').value);r.name=n;r.desc=d||r.desc;if(img)r.img=img;if(sv.length)r.svc=sv;toast(`✅ Negocio <b>${n}</b> actualizado`,'ok')}
-else{restaurants.push({id:++nextRestId,name:n,img:img||IMGS.burger,desc:d||'Nuevo negocio',svc:sv.length?sv:['Delivery propio'],menu:[M('Plato de bienvenida','Edita este plato desde tu panel','Normal',5,'Grande',8)]});toast(`🏪 <b>${n}</b> creado con éxito. Ya aparece para los clientes.`,'ok')}
-closeM('m-biz');renderRests();renderOwner()}
+/* NEGOCIOS: cada negocio nuevo queda asignado al usuario dueño autenticado. */
+function openBizForm(isEdit){editBiz=isEdit;const r=isEdit?selectedOwnerRestaurant():null;if(isEdit&&!r)return toast('No tienes un negocio que modificar.');$('bizTitle').textContent=isEdit?'✏️ Modificar negocio':'🏪 Crear negocio';$('bName').value=isEdit?r.name:'';$('bDesc').value=isEdit?r.desc:'';$('bImg').value=isEdit?r.img||'':'';$('bSvc').value=isEdit?(r.svc||[]).join(', '):'';$('m-biz').classList.add('open')}
+async function saveBiz(){try{const n=$('bName').value.trim(),d=$('bDesc').value.trim(),img=$('bImg').value.trim(),sv=$('bSvc').value.split(',').map(s=>s.trim()).filter(Boolean);if(!n)return toast('El nombre del negocio es obligatorio.','warn');
+ if(editBiz){const r=selectedOwnerRestaurant();if(!r)return toast('No tienes un negocio que modificar.','warn');r.name=n;r.desc=d||r.desc;r.img=img||r.img;r.svc=sv.length?sv:r.svc;const saved=await saveRestaurantToServer(r);restaurants=restaurants.map(x=>String(x.id)===String(saved.id)?saved:x);toast('Negocio actualizado y guardado.','ok')}
+ else{const result=await api('/api/restaurants',{method:'POST',body:JSON.stringify({name:n,desc:d,img,svc:sv.length?sv:['Delivery propio']})});restaurants.push(result.restaurant);$('ownerSel').value=result.restaurant.id;toast('Negocio creado y asignado a tu cuenta.','ok')}
+ closeM('m-biz');renderRests();renderOwner();
+ }catch(e){toast('No se pudo guardar el negocio: '+e.message,'warn')}}
 
 function setStatus(id,st){const o=orders.find(x=>x.id===id);o.status=st;
 if(st==='preparacion')addNotif(`👨‍🍳 <b>Pedido #${id}:</b> ${o.rest} confirmó tu orden y está en preparación.`);
 if(st==='listo')notifyDrivers(o);
 if(st==='entregado'){addNotif(`🎉 <b>Pedido #${id} entregado.</b> ¡Gracias por tu compra!`);myDeliveries.push(o);toast('🎉 Pedido entregado. ¡Buen provecho!','ok')}
 renderOwnerOrders();if(role==='cliente')renderMyOrders();if(role==='repartidor')renderRepartidor()}
-function cancelOrder(id){orders=orders.filter(o=>o.id!==id);addNotif(`❌ <b>Pedido #${id} rechazado</b> por el restaurante.`);renderOwnerOrders();if(role==='cliente')renderMyOrders()}
+function cancelOrder(id){const o=orders.find(x=>x.id===id);if(o)o.status='cancelado';addNotif(`❌ <b>Pedido #${id} rechazado</b> por el restaurante.`);renderOwnerOrders();if(role==='cliente')renderMyOrders()}
 
 /* REPARTIDOR */
 function renderRepartidor(){const av=$('avail').checked;const avail=orders.filter(o=>o.status==='listo');
@@ -430,7 +430,7 @@ toast('📱 Código enviado a '+phone,'ok')}
 
 /* CAPA PROFESIONAL: persistencia local, cuentas, GPS y comisiones.
    La persistencia y las cuentas de esta versión son locales al navegador; para producción se necesita backend seguro. */
-const DB_KEY='foodtrack_pro_token';
+const DB_KEY='foodtrack_pro_token_v2';
 let driverWatch=null,driverCoords=null,saveTimer=null;
 let API_TOKEN=localStorage.getItem(DB_KEY)||'';
 async function api(path,options={}){
@@ -461,10 +461,10 @@ async function initRemote(){
       if(Number.isFinite(d.orderSeq))orderSeq=d.orderSeq;
       if(Number.isFinite(d.nextRestId))nextRestId=d.nextRestId;
       if(Number.isFinite(d.notifCount))notifCount=d.notifCount;
-      if(!Array.isArray(d.restaurants)||!d.restaurants.length){await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});}
-      $('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+currentUser.role;
+      if(currentUser.role==='admin'&&(!Array.isArray(d.restaurants)||!d.restaurants.length)){await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});const seeded=await api('/api/state');if(Array.isArray(seeded.restaurants))restaurants=seeded.restaurants;}
+      $('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+({admin:'Administrador',dueno:'Dueño',cliente:'Cliente',repartidor:'Repartidor'}[currentUser.role]||currentUser.role);$('logoutBtn').style.display='inline-block';$('bellBtn').style.display='inline-block';
       $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone||'';
-      if(currentUser.role!=='cliente')switchRole(currentUser.role);
+      switchRole(currentUser.role);
     }
     renderRests();renderMyOrders();
     if(!currentUser)setTimeout(()=>{openReg();toast('👋 Bienvenido a FoodTrack Pro. Inicia sesión o crea una cuenta.')},500);
@@ -474,19 +474,25 @@ function showLogin(){$('regStep1').style.display='none';$('regStep2').style.disp
 function showRegister(){$('regStep1').style.display='block';$('regStep2').style.display='none';$('loginPanel').style.display='none'}
 openReg=function(){$('m-reg').classList.add('open');showLogin()};
 async function hashPassword(value){if(!crypto.subtle)throw new Error('Usa la aplicación desde HTTPS o localhost para crear contraseñas protegidas.');const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('')}
-async function loginAccount(){try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({phone:$('loginPhone').value.trim(),password:$('loginPassword').value})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;if(!Array.isArray(d.restaurants)||!d.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}}
-function afterLogin(){closeM('m-reg');$('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+currentUser.role; $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone;persist();if(currentUser.role!=='cliente')switchRole(currentUser.role);toast('Bienvenido, '+currentUser.name,'ok')}
-sendCode=async function(){const n=$('rName').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim(),pw=$('rPassword').value;if(!n||!a||!ph||!pw)return toast('Completa nombre, dirección, teléfono y contraseña','warn');if(pw.length<8)return toast('La contraseña debe tener al menos 8 caracteres','warn');try{const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name:n,address:a,phone:ph,password:pw})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const state=await api('/api/state');if(!Array.isArray(state.restaurants)||!state.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();addNotif('Cuenta creada y guardada en la base de datos.');renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}};
+async function loginAccount(){try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({login:$('loginPhone').value.trim(),password:$('loginPassword').value})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;if(currentUser.role==='admin'&&(!Array.isArray(d.restaurants)||!d.restaurants.length)){await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});}afterLogin();renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}}
+function afterLogin(){closeM('m-reg');$('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+({admin:'Administrador',dueno:'Dueño',cliente:'Cliente',repartidor:'Repartidor'}[currentUser.role]||currentUser.role);$('logoutBtn').style.display='inline-block';$('bellBtn').style.display='inline-block'; $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone;persist();switchRole(currentUser.role);toast('Bienvenido, '+currentUser.name,'ok')}
+sendCode=async function(){const n=$('rName').value.trim(),un=$('rUsername').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim(),pw=$('rPassword').value;if(!n||!un||!a||!ph||!pw)return toast('Completa nombre, usuario, dirección, teléfono y contraseña','warn');if(pw.length<8)return toast('La contraseña debe tener al menos 8 caracteres','warn');try{const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name:n,username:un,address:a,phone:ph,password:pw})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const state=await api('/api/state');if(!Array.isArray(state.restaurants)||!state.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();addNotif('Cuenta creada y guardada en la base de datos.');renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}};
 verifyCodeFn=function(){loginAccount()};
 function startDriverGPS(){if(!API_TOKEN)return toast('Inicia sesión como repartidor para compartir GPS','warn');if(!navigator.geolocation)return toast('Este navegador no admite geolocalización','warn');if(!window.isSecureContext)return toast('El GPS requiere HTTPS o localhost','warn');$('gpsState').textContent='Solicitando permiso…';driverWatch=navigator.geolocation.watchPosition(async pos=>{driverCoords={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),at:new Date().toISOString()};$('gpsState').textContent='GPS activo · precisión ±'+driverCoords.accuracy+' m';$('gpsMap').innerHTML='📍 '+driverCoords.lat.toFixed(5)+', '+driverCoords.lng.toFixed(5)+'<br><a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+driverCoords.lat+','+driverCoords.lng+'">Abrir ubicación en Google Maps</a>';try{await api('/api/location',{method:'POST',body:JSON.stringify(driverCoords)})}catch(e){toast('No se pudo enviar la ubicación: '+e.message,'warn')}},err=>{$('gpsState').textContent='No se pudo obtener ubicación';toast(err.message,'warn')},{enableHighAccuracy:true,maximumAge:5000,timeout:15000})}
 function stopDriverGPS(){if(driverWatch!==null)navigator.geolocation.clearWatch(driverWatch);driverWatch=null;$('gpsState').textContent='GPS apagado';}
+
+async function logoutAccount(){try{if(driverWatch!==null)stopDriverGPS();API_TOKEN='';currentUser=null;localStorage.removeItem(DB_KEY);role='cliente';restaurants=[];orders=[];myDeliveries=[];$('userChip').textContent='Iniciar sesión';$('logoutBtn').style.display='none';$('bellBtn').style.display='none';document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));$('v-cliente').classList.add('active');renderRests();openReg();showLogin();toast('Sesión cerrada.','ok')}catch(e){toast(e.message,'warn')}}
+async function adminCreateUser(){try{const body={name:$('uName').value.trim(),username:$('uUsername').value.trim(),phone:$('uPhone').value.trim(),address:$('uAddress').value.trim(),password:$('uPassword').value,role:$('uRole').value};if(!body.name||!body.username||!body.phone||!body.password)return toast('Completa nombre, usuario, teléfono y contraseña.','warn');const result=await api('/api/admin/users',{method:'POST',body:JSON.stringify(body)});['uName','uUsername','uPhone','uAddress','uPassword'].forEach(id=>$(id).value='');toast('Cuenta '+result.user.role+' creada. Usuario: '+result.user.username,'ok');renderAdminUsers()}catch(e){toast('No se pudo crear la cuenta: '+e.message,'warn')}}
+async function renderAdminUsers(){const box=$('adminUsers');if(!box)return;try{const rows=await api('/api/admin/users');box.innerHTML=rows.length?'<h3>Cuentas registradas</h3>'+rows.map(u=>`<div class="menu-item"><b>${u.name}</b> · ${u.role}<br><span class="mut">Usuario: ${u.username} · Teléfono: ${u.phone}</span></div>`).join(''):'<p class="mut">No hay cuentas todavía.</p>';const owners=rows.filter(u=>u.role==='dueno');$('assignOwner').innerHTML='<option value="">Sin asignar</option>'+owners.map(u=>`<option value="${u.id}">${u.name} (@${u.username})</option>`).join('');$('assignRest').innerHTML=restaurants.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')||'<option value="">No hay negocios</option>'}catch(e){box.innerHTML='<p class="mut">'+e.message+'</p>'}}
+async function assignExistingRestaurant(){try{const id=$('assignRest').value,ownerId=$('assignOwner').value||null;if(!id)return toast('Selecciona un negocio.','warn');const result=await api('/api/admin/restaurants/'+encodeURIComponent(id)+'/owner',{method:'PUT',body:JSON.stringify({ownerId:ownerId?Number(ownerId):null})});restaurants=restaurants.map(r=>String(r.id)===String(id)?result.restaurant:r);toast(ownerId?'Negocio asignado al dueño.':'Se quitó la asignación del dueño.','ok');renderAdmin();}catch(e){toast(e.message,'warn')}}
+
 function commissionFor(o){return Number(o.total||0)*0.10}
 function renderFinance(){const valid=orders.filter(o=>o.status!=='cancelado');const gross=valid.reduce((s,o)=>s+Number(o.total||0),0),fee=valid.reduce((s,o)=>s+commissionFor(o),0);$('adminFinance').innerHTML='<div class="grid"><div><span class="mut">Ventas registradas</span><h2>'+fmt(gross)+'</h2></div><div><span class="mut">Comisión plataforma (10%)</span><h2 class="price">'+fmt(fee)+'</h2></div><div><span class="mut">Restaurantes (90%)</span><h2>'+fmt(gross-fee)+'</h2></div></div><p class="mut">Cálculo ilustrativo sobre pedidos no cancelados. No procesa cobros ni liquidaciones reales.</p>'}
-const oldRenderAdmin=renderAdmin;renderAdmin=function(){oldRenderAdmin();renderFinance();renderDriverLocations()};
+const oldRenderAdmin=renderAdmin;renderAdmin=function(){oldRenderAdmin();renderFinance();renderDriverLocations();renderAdminUsers()};
 async function renderDriverLocations(){const box=$('driverLocations');if(!box)return;try{const rows=await api('/api/locations');box.innerHTML=rows.length?rows.map(x=>`<div class="menu-item"><b>${x.name}</b><p class="mut">${Number(x.lat).toFixed(5)}, ${Number(x.lng).toFixed(5)} · precisión ±${x.accuracy||'?'} m</p><a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${x.lat},${x.lng}">Abrir en Google Maps</a><p class="mut">Actualizado: ${new Date(x.recorded_at).toLocaleString()}</p></div>`).join(''):'<p class="mut">Todavía no hay ubicaciones compartidas.</p>'}catch(e){box.innerHTML='<p class="mut">'+e.message+'</p>'}}
 const oldRenderRests=renderRests;renderRests=function(){const q=($('restSearch')?.value||'').toLowerCase(),cat=$('restFilter')?.value||'';$('restGrid').innerHTML=restaurants.filter(r=>!r.blocked&&(!q||(r.name+' '+r.desc+' '+r.menu.map(m=>m.n).join(' ')).toLowerCase().includes(q))&&(!cat||({burger:/burger|hamburg/i,pizza:/pizza/i,taco:/taco|mex/i,sushi:/sushi/i}[cat]).test(r.name+' '+r.desc))).map(r=>`<div class="card" onclick="openRest(${r.id})"><img src="${r.img}" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=FoodTrack'"><div class="card-body"><h3>${r.name}</h3><p class="mut">${r.desc}</p>${r.svc.map(x=>`<span class="tag">${x}</span>`).join('')}<p style="margin-top:8px;color:var(--ok);font-size:.82rem">● Disponible</p></div></div>`).join('')||'<p class="mut">No encontramos restaurantes con esa búsqueda.</p>'};
 function wrapPersist(name){const fn=window[name];if(typeof fn!=='function')return;window[name]=function(...args){const result=fn.apply(this,args);persist();return result}}
-['placeOrder','saveDish','toggleDish','saveBiz','setStatus','cancelOrder','acceptOrder','adminRename','adminToggle','adminDelete','addNotif','toggleNotifs'].forEach(wrapPersist);
+['placeOrder','setStatus','cancelOrder','acceptOrder','adminRename','adminToggle','adminDelete','addNotif','toggleNotifs'].forEach(wrapPersist);
 initRemote();
 // Sincroniza pedidos y paneles periódicamente para reflejar cambios de otros usuarios.
 setInterval(async()=>{if(!API_TOKEN)return;try{const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;renderMyOrders();if(role==='cliente')renderRests();if(role==='dueno'){renderOwner();renderOwnerOrders()}if(role==='repartidor')renderRepartidor();if(role==='admin')renderAdmin()}catch(e){console.warn('Sincronización temporalmente no disponible',e)}},15000);

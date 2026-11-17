@@ -1,8 +1,8 @@
 {
   "name": "foodtrack-pro-render",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "FoodTrack Pro con API Express y PostgreSQL para Render",
+  "description": "FoodTrack Pro con autenticación por usuario, roles y PostgreSQL para Render",
   "main": "server.js",
   "scripts": {"start": "node server.js"},
   "engines": {"node": ">=20"},

@@ -27,6 +27,10 @@ async function initDb() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
   await pool.query('ALTER TABLE app_users ADD COLUMN IF NOT EXISTS username TEXT');
+  await pool.query("ALTER TABLE app_users ADD COLUMN IF NOT EXISTS account_status TEXT NOT NULL DEFAULT 'active'");
+  await pool.query('ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE app_users ADD COLUMN IF NOT EXISTS blocked_reason TEXT');
+  await pool.query('ALTER TABLE app_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
   await pool.query("UPDATE app_users SET username=phone WHERE username IS NULL OR username=''");
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS app_users_username_unique ON app_users(LOWER(username))');
   await pool.query(`CREATE TABLE IF NOT EXISTS app_state (
@@ -49,13 +53,13 @@ async function initDb() {
   }
 }
 function signToken(user) { return jwt.sign({ id: user.id, username: user.username, phone: user.phone, role: user.role }, JWT_SECRET, { expiresIn: '7d' }); }
-function auth(req, res, next) {
+async function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'Inicia sesión para continuar.' });
-  try { req.auth = jwt.verify(token, JWT_SECRET); next(); }
-  catch { return res.status(401).json({ error: 'Sesión caducada. Inicia sesión de nuevo.' }); }
+  try { req.auth = jwt.verify(token, JWT_SECRET); const check=await pool.query('SELECT account_status FROM app_users WHERE id=$1',[req.auth.id]); if(!check.rows[0] || check.rows[0].account_status!=='active') return res.status(403).json({error:'Esta cuenta está bloqueada o ya no está disponible. Contacta con el administrador.'}); next(); }
+  catch (e) { if(e.status) return res.status(e.status).json({error:e.message}); return res.status(401).json({ error: 'Sesión caducada. Inicia sesión de nuevo.' }); }
 }
-const safeUser = u => ({ id: u.id, name: u.name, username: u.username, addr: u.address || '', phone: u.phone, role: u.role });
+const safeUser = u => ({ id: u.id, name: u.name, username: u.username, addr: u.address || '', phone: u.phone, role: u.role, accountStatus: u.account_status || 'active' });
 const clean = v => String(v || '').trim();
 app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ok: true, database: 'connected' }); }
@@ -65,7 +69,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, address = '', phone, password } = req.body || {};
     const username = clean(req.body?.username || phone).toLowerCase();
-    if (!clean(name) || !clean(phone) || !username || !password || String(password).length < 8) return res.status(400).json({ error: 'Indica nombre, usuario, teléfono y contraseña de al menos 8 caracteres.' });
+    if (!clean(name) || !clean(phone) || !username || !password || String(password).length < 4) return res.status(400).json({ error: 'Indica nombre, usuario, teléfono y contraseña de al menos 4 caracteres.' });
     const hash = await bcrypt.hash(String(password), 12);
     const result = await pool.query(`INSERT INTO app_users(name,username,address,phone,password_hash,role)
       VALUES($1,$2,$3,$4,$5,'cliente') RETURNING *`, [clean(name), username, String(address), clean(phone), hash]);
@@ -81,7 +85,7 @@ app.post('/api/auth/login', async (req, res) => {
     const login = clean(req.body?.login || req.body?.username || req.body?.phone).toLowerCase();
     const result = await pool.query('SELECT * FROM app_users WHERE LOWER(username)= $1 OR phone=$1 LIMIT 1', [login]);
     const user = result.rows[0];
-    if (!user || !(await bcrypt.compare(String(req.body?.password || ''), user.password_hash))) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+    if (!user || user.account_status !== 'active' || !(await bcrypt.compare(String(req.body?.password || ''), user.password_hash))) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
     res.json({ token: signToken(user), user: safeUser(user) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'No se pudo iniciar sesión.' }); }
 });
@@ -90,7 +94,7 @@ app.post('/api/admin/users', auth, async (req, res) => {
     if (req.auth.role !== 'admin') return res.status(403).json({ error: 'Solo el administrador puede crear cuentas internas.' });
     const { name, address = '', phone, password, role } = req.body || {};
     const username = clean(req.body?.username).toLowerCase();
-    if (!clean(name) || !username || !clean(phone) || !password || String(password).length < 8 || !['dueno','repartidor'].includes(role)) return res.status(400).json({ error: 'Completa nombre, usuario, teléfono y contraseña (mínimo 8 caracteres). Rol permitido: dueño o repartidor.' });
+    if (!clean(name) || !username || !clean(phone) || !password || String(password).length < 4 || !['dueno','repartidor'].includes(role)) return res.status(400).json({ error: 'Completa nombre, usuario, teléfono y contraseña (mínimo 4 caracteres). Rol permitido: dueño o repartidor.' });
     const hash = await bcrypt.hash(String(password), 12);
     const r = await pool.query(`INSERT INTO app_users(name,username,address,phone,password_hash,role) VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [clean(name),username,String(address),clean(phone),hash,role]);
     res.status(201).json({ user: safeUser(r.rows[0]) });
@@ -101,20 +105,42 @@ app.post('/api/admin/users', auth, async (req, res) => {
 });
 app.get('/api/admin/users', auth, async (req,res) => {
   if(req.auth.role!=='admin') return res.status(403).json({error:'Solo el administrador.'});
-  const r=await pool.query("SELECT id,name,username,address AS addr,phone,role,created_at FROM app_users WHERE role IN ('dueno','repartidor','cliente') ORDER BY created_at DESC");
+  const r=await pool.query("SELECT id,name,username,address AS addr,phone,role,account_status,blocked_at,blocked_reason,created_at FROM app_users WHERE role IN ('dueno','repartidor','cliente') ORDER BY created_at DESC");
   res.json(r.rows);
 });
+// Perfil propio: nunca se devuelve el hash ni la contraseña.
+app.put('/api/me', auth, async (req,res)=>{
+  try { const {name,address='',phone,username}=req.body||{}; if(!clean(name)||!clean(phone)||!clean(username)) return res.status(400).json({error:'Nombre, usuario y teléfono son obligatorios.'});
+    const r=await pool.query('UPDATE app_users SET name=$1,address=$2,phone=$3,username=$4,updated_at=NOW() WHERE id=$5 RETURNING id,name,username,address,phone,role,account_status',[clean(name),clean(address),clean(phone),clean(username).toLowerCase(),req.auth.id]);
+    res.json({user:safeUser(r.rows[0])});
+  } catch(e){ if(e.code==='23505')return res.status(409).json({error:'Ese usuario o teléfono ya está utilizado.'}); console.error(e);res.status(500).json({error:'No se pudo actualizar el perfil.'}); }
+});
+app.put('/api/me/password', auth, async (req,res)=>{
+  try { const {currentPassword,newPassword}=req.body||{}; if(String(newPassword||'').length<4)return res.status(400).json({error:'La nueva contraseña debe tener al menos 4 caracteres.'}); const q=await pool.query('SELECT password_hash FROM app_users WHERE id=$1',[req.auth.id]); if(!q.rows[0]||!(await bcrypt.compare(String(currentPassword||''),q.rows[0].password_hash)))return res.status(400).json({error:'La contraseña actual no es correcta.'}); const hash=await bcrypt.hash(String(newPassword),12); await pool.query('UPDATE app_users SET password_hash=$1,updated_at=NOW() WHERE id=$2',[hash,req.auth.id]); res.json({ok:true}); }
+  catch(e){console.error(e);res.status(500).json({error:'No se pudo cambiar la contraseña.'});}
+});
+app.put('/api/admin/users/:id', auth, async(req,res)=>{
+  if(req.auth.role!=='admin')return res.status(403).json({error:'Solo el administrador.'});
+  try { const b=req.body||{}; const fields=['name','username','phone','address','role']; const vals=[clean(b.name),clean(b.username).toLowerCase(),clean(b.phone),clean(b.address),b.role]; if(!vals[0]||!vals[1]||!vals[2]||!['cliente','dueno','repartidor'].includes(vals[4]))return res.status(400).json({error:'Datos de cuenta incompletos o rol no válido.'});
+    let sql='UPDATE app_users SET name=$1,username=$2,phone=$3,address=$4,role=$5,updated_at=NOW()'; if(b.newPassword){if(String(b.newPassword).length<4)return res.status(400).json({error:'La contraseña debe tener al menos 4 caracteres.'}); vals.push(await bcrypt.hash(String(b.newPassword),12));sql+=`,password_hash=$${vals.length}`;} vals.push(req.params.id); const r=await pool.query(sql+` WHERE id=$${vals.length} RETURNING id,name,username,address,phone,role,account_status,created_at,blocked_at,blocked_reason`,vals); if(!r.rows[0])return res.status(404).json({error:'Cuenta no encontrada.'});res.json({user:r.rows[0]});
+  }catch(e){if(e.code==='23505')return res.status(409).json({error:'Usuario o teléfono ya registrado.'});console.error(e);res.status(500).json({error:'No se pudo modificar la cuenta.'});}
+});
+app.post('/api/admin/users/:id/block',auth,async(req,res)=>{if(req.auth.role!=='admin')return res.status(403).json({error:'Solo el administrador.'});try{if(String(req.params.id)===String(req.auth.id))return res.status(400).json({error:'No puedes bloquear tu propia cuenta administradora.'});const r=await pool.query("UPDATE app_users SET account_status='blocked',blocked_at=NOW(),blocked_reason=$1,updated_at=NOW() WHERE id=$2 AND role<>'admin' RETURNING id,name,account_status,blocked_at,blocked_reason",[clean(req.body?.reason),req.params.id]);if(!r.rows[0])return res.status(404).json({error:'Cuenta no encontrada o no bloqueable.'});if((await pool.query('SELECT role FROM app_users WHERE id=$1',[req.params.id])).rows[0]?.role==='dueno')await setOwnerSuspended(req.params.id,true);res.json({user:r.rows[0]});}catch(e){console.error(e);res.status(500).json({error:'No se pudo bloquear la cuenta.'});}});
+app.post('/api/admin/users/:id/unblock',auth,async(req,res)=>{if(req.auth.role!=='admin')return res.status(403).json({error:'Solo el administrador.'});try{const r=await pool.query("UPDATE app_users SET account_status='active',blocked_at=NULL,blocked_reason=NULL,updated_at=NOW() WHERE id=$1 RETURNING id,name,account_status",[req.params.id]);if(!r.rows[0])return res.status(404).json({error:'Cuenta no encontrada.'});if((await pool.query('SELECT role FROM app_users WHERE id=$1',[req.params.id])).rows[0]?.role==='dueno')await setOwnerSuspended(req.params.id,false);res.json({user:r.rows[0]});}catch(e){console.error(e);res.status(500).json({error:'No se pudo reactivar la cuenta.'});}});
+app.delete('/api/admin/users/:id',auth,async(req,res)=>{if(req.auth.role!=='admin')return res.status(403).json({error:'Solo el administrador.'});const c=await pool.connect();try{if(String(req.params.id)===String(req.auth.id))return res.status(400).json({error:'No puedes eliminar tu propia cuenta administradora.'});await c.query('BEGIN');const found=await c.query("SELECT id,name,phone,role FROM app_users WHERE id=$1 AND role<>'admin' FOR UPDATE",[req.params.id]);if(!found.rows[0]){await c.query('ROLLBACK');return res.status(404).json({error:'Cuenta no encontrada o no eliminable.'});}const u=found.rows[0];const stateQ=await c.query('SELECT payload FROM app_state WHERE id=1 FOR UPDATE');const state=stateQ.rows[0]?.payload||{};if(u.role==='cliente'){state.orders=(state.orders||[]).map(o=>String(o.phone||'')===String(u.phone)?{...o,client:'Cliente eliminado',phone:'',addr:'',customerDeleted:true}:o);state.myDeliveries=(state.myDeliveries||[]).map(o=>String(o.phone||'')===String(u.phone)?{...o,client:'Cliente eliminado',phone:'',addr:'',customerDeleted:true}:o);}if(u.role==='dueno'){state.restaurants=(state.restaurants||[]).map(r=>Number(r.ownerId)===Number(u.id)?{...r,ownerId:null,ownerSuspended:true,isOpen:false}:r);}if(u.role==='repartidor'){state.myDeliveries=(state.myDeliveries||[]).map(o=>Number(o.driverId)===Number(u.id)?{...o,driverId:null,driverName:null}:o);state.orders=(state.orders||[]).map(o=>Number(o.driverId)===Number(u.id)?{...o,driverId:null,driverName:null}:o);}await c.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]);await c.query('DELETE FROM app_users WHERE id=$1',[req.params.id]);await c.query('COMMIT');res.json({ok:true});}catch(e){await c.query('ROLLBACK');console.error(e);res.status(500).json({error:'No se pudo eliminar la cuenta.'});}finally{c.release();}});
 app.get('/api/me', auth, async (req, res) => {
   const r = await pool.query('SELECT id,name,username,address,phone,role FROM app_users WHERE id=$1', [req.auth.id]);
   if (!r.rows[0]) return res.status(401).json({ error: 'Cuenta no encontrada.' });
   res.json({ user: safeUser(r.rows[0]) });
 });
+async function setOwnerSuspended(ownerId, suspended) { const q=await pool.query('SELECT payload FROM app_state WHERE id=1 FOR UPDATE'); const state=q.rows[0]?.payload||{}; state.restaurants=(state.restaurants||[]).map(r=>Number(r.ownerId)===Number(ownerId)?{...r,ownerSuspended:suspended}:r); await pool.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]); }
 function visibleState(payload, user) {
   const state = structuredClone(payload || {});
+  const localClock = new Intl.DateTimeFormat('en-GB',{timeZone:process.env.BUSINESS_TIMEZONE || 'America/Martinique',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());
   const all = Array.isArray(state.restaurants) ? state.restaurants : [];
   if (user.role === 'dueno') state.restaurants = all.filter(r => Number(r.ownerId) === Number(user.id));
   if (user.role === 'cliente') {
-    state.restaurants = all.filter(r => !r.blocked);
+    state.restaurants = all.filter(r => !r.blocked && !r.ownerSuspended && r.isOpen !== false && (!r.openTime || !r.closeTime || ((r.closeTime >= r.openTime ? (localClock >= r.openTime && localClock <= r.closeTime) : (localClock >= r.openTime || localClock <= r.closeTime)))));
     state.orders = (state.orders || []).filter(o => String(o.phone) === String(user.phone));
     state.myDeliveries = [];
     state.notifications = [];
@@ -148,7 +174,7 @@ app.post('/api/restaurants', auth, async (req,res)=>{
     if(!['dueno','admin'].includes(req.auth.role)) return res.status(403).json({error:'Solo un dueño o administrador puede crear negocios.'});
     const b=req.body||{}; if(!clean(b.name)) return res.status(400).json({error:'El nombre del negocio es obligatorio.'});
     const id=Date.now()+Math.floor(Math.random()*1000);
-    const item={id,name:clean(b.name),desc:clean(b.desc)||'Nuevo negocio',img:clean(b.img)||'',svc:Array.isArray(b.svc)?b.svc:['Delivery propio'],menu:[],blocked:false,ownerId:req.auth.role==='dueno'?Number(req.auth.id):(Number(b.ownerId)||null)};
+    const item={id,name:clean(b.name),desc:clean(b.desc)||'Nuevo negocio',img:clean(b.img)||'',svc:Array.isArray(b.svc)?b.svc:['Delivery propio'],menu:[],blocked:false,phone:clean(b.phone),whatsapp:clean(b.whatsapp),openTime:clean(b.openTime),closeTime:clean(b.closeTime),isOpen:b.isOpen!==false,ownerId:req.auth.role==='dueno'?Number(req.auth.id):(Number(b.ownerId)||null)};
     await pool.query(`UPDATE app_state SET payload=jsonb_set(payload,'{restaurants}',COALESCE(payload->'restaurants','[]'::jsonb) || $1::jsonb,true),updated_at=NOW() WHERE id=1`,[JSON.stringify([item])]);
     res.status(201).json({restaurant:item});
   }catch(e){console.error(e);res.status(500).json({error:'No se pudo crear el negocio.'});}
@@ -160,7 +186,7 @@ app.put('/api/restaurants/:id', auth, async (req,res)=>{
     const state=q.rows[0]?.payload||{}, list=state.restaurants||[];
     const idx=list.findIndex(x=>String(x.id)===id); if(idx<0)return res.status(404).json({error:'Negocio no encontrado.'});
     const old=list[idx]; if(req.auth.role!=='admin' && !(req.auth.role==='dueno' && Number(old.ownerId)===Number(req.auth.id)))return res.status(403).json({error:'No tienes permiso para modificar este negocio.'});
-    const allowed=req.auth.role==='admin'?['name','desc','img','svc','menu','blocked','ownerId']:['name','desc','img','svc','menu'];
+    const allowed=req.auth.role==='admin'?['name','desc','img','svc','menu','blocked','ownerId','phone','whatsapp','openTime','closeTime','isOpen']:['name','desc','img','svc','menu','phone','whatsapp','openTime','closeTime','isOpen'];
     for(const k of allowed) if(Object.prototype.hasOwnProperty.call(b,k)) old[k]=b[k];
     list[idx]=old; state.restaurants=list;
     await pool.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]);
@@ -172,7 +198,7 @@ app.put('/api/admin/restaurants/:id/owner', auth, async (req,res)=>{
   const ownerId=req.body?.ownerId===null?null:Number(req.body?.ownerId);
   try{
     if(ownerId!==null){const u=await pool.query("SELECT id FROM app_users WHERE id=$1 AND role='dueno'",[ownerId]);if(!u.rows.length)return res.status(400).json({error:'La cuenta seleccionada no es un dueño válido.'});}
-    const c=await pool.connect();try{await c.query('BEGIN');const q=await c.query('SELECT payload FROM app_state WHERE id=1 FOR UPDATE');const state=q.rows[0]?.payload||{};const r=(state.restaurants||[]).find(x=>String(x.id)===String(req.params.id));if(!r){await c.query('ROLLBACK');return res.status(404).json({error:'Negocio no encontrado.'});}r.ownerId=ownerId;await c.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]);await c.query('COMMIT');res.json({ok:true,restaurant:r});}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
+    const c=await pool.connect();try{await c.query('BEGIN');const q=await c.query('SELECT payload FROM app_state WHERE id=1 FOR UPDATE');const state=q.rows[0]?.payload||{};const r=(state.restaurants||[]).find(x=>String(x.id)===String(req.params.id));if(!r){await c.query('ROLLBACK');return res.status(404).json({error:'Negocio no encontrado.'});}r.ownerId=ownerId;if(ownerId!==null)r.ownerSuspended=false;await c.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]);await c.query('COMMIT');res.json({ok:true,restaurant:r});}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
   }catch(e){console.error(e);res.status(500).json({error:'No se pudo asignar el negocio.'});}
 });
 app.post('/api/orders', auth, async (req, res) => {

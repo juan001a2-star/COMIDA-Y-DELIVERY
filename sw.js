@@ -1,5 +1,5 @@
 /* Service Worker de FoodTrack Pro */
-const CACHE = 'foodtrack-v4-auth-owner-fixes';
+const CACHE = 'foodtrack-v5-profiles-account-controls';
 const ARCHIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });

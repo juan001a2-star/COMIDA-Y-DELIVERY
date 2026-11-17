@@ -1,43 +1,54 @@
-FOODTRACK PRO — RENDER + POSTGRESQL (CORRECCIÓN DE ACCESOS Y NEGOCIOS)
-======================================================================
+FOODTRACK PRO — VERSIÓN 3 (PERFILES Y CONTROL DE CUENTAS)
+=======================================================
 
-CAMBIOS DE ESTA VERSIÓN
-- Inicio de sesión por nombre de usuario o teléfono + contraseña.
-- El rol se obtiene exclusivamente de la cuenta autenticada. Ya no existe un selector superior para fingir ser cliente, dueño, repartidor o administrador.
-- El administrador inicial se crea con ADMIN_USERNAME (por defecto: admin), ADMIN_PHONE y ADMIN_PASSWORD.
-- El administrador puede crear cuentas de dueño y repartidor desde su panel, indicando nombre de usuario y contraseña.
-- El administrador también puede asignar negocios de demostración ya existentes a una cuenta de dueño desde su panel.
-- El registro público solo crea clientes.
-- Cada negocio creado por un dueño queda asignado a su ID de usuario.
-- Cada dueño solo recibe, ve y modifica sus propios negocios, menús y pedidos.
-- Los cambios de nombre, descripción, servicios, platos, precios y disponibilidad se guardan inmediatamente en PostgreSQL.
-- Los negocios recién creados se guardan en PostgreSQL y aparecen en el catálogo de clientes.
-- Se añadió migración automática de la columna username para bases de datos ya existentes.
-- Se cambió la versión de caché del Service Worker para que los navegadores descarguen la nueva interfaz.
+CAMBIOS INCORPORADOS EN ESTA ENTREGA
+- Perfil personal para cliente, dueño, repartidor y administrador: editar nombre, usuario, teléfono y dirección.
+- Cambio de contraseña desde el perfil, verificando primero la contraseña actual.
+- Contraseñas con mínimo de 4 caracteres, según la decisión solicitada. Recomendación: usar contraseñas más largas por seguridad.
+- Botón para mostrar u ocultar la contraseña en inicio de sesión, registro y creación de cuentas.
+- El administrador puede consultar cuentas, modificar datos/rol, restablecer contraseña, bloquear, desbloquear o eliminar permanentemente.
+- El bloqueo conserva la cuenta y sus datos; impide iniciar sesión. No existe eliminación automática por tiempo.
+- Al bloquear al dueño, sus negocios dejan de aparecer a los clientes. Al reactivarlo, vuelven a estar disponibles según sus horarios.
+- La eliminación permanente pide confirmación en la interfaz. Se anonimiza el contacto del cliente en pedidos históricos y se conserva la operación histórica; los negocios del dueño eliminado quedan sin propietario asignado.
+- Las contraseñas se almacenan como hashes bcrypt. El administrador NO puede ver la contraseña original; puede restablecerla.
+- Negocios: teléfono, WhatsApp, horario de apertura/cierre, interruptor activo y fotografía/flyer.
+- Platos: imagen opcional, por URL o archivo de imagen pequeño (máximo 700 KB por imagen).
+- El catálogo de clientes filtra negocios bloqueados, suspendidos, desactivados o fuera del horario configurado.
+- Panel del dueño: resumen de ventas del día, mes y acumuladas, según los pedidos registrados.
+- Panel administrador: resumen de pedidos y ventas por negocio.
+- Migraciones automáticas agregan campos de estado de cuenta a las bases de datos existentes.
+- Se actualizó la caché del Service Worker.
 
-DESPLIEGUE / ACTUALIZACIÓN EN RENDER
-1. Descomprime el ZIP.
-2. Sube el contenido de esta carpeta a la raíz de tu repositorio GitHub (server.js, package.json, index.html y render.yaml deben quedar en la raíz).
-3. Haz commit y push a GitHub.
-4. En Render, abre el servicio foodtrack-pro y confirma que está conectado al repositorio. Render debe iniciar un nuevo deploy al detectar el commit.
-5. En Environment comprueba que existan DATABASE_URL, JWT_SECRET, ADMIN_USERNAME, ADMIN_PHONE y ADMIN_PASSWORD. No cambies DATABASE_URL ni JWT_SECRET si ya tienes datos/cuentas funcionando.
-6. Espera a que el deploy termine y visita /api/health. Debe responder {"ok":true,"database":"connected"}.
+IMPORTANTE: ALCANCE PENDIENTE
+Esta entrega es una ampliación funcional, no el sistema contable/logístico final completo. Aún falta implementar un libro contable formal con gastos, devoluciones, cierres/caja y conciliaciones; estadísticas detalladas de clientes únicos y productos; asignación y trazabilidad completa de cada delivery; exportaciones e informes; y almacenamiento externo optimizado de imágenes. Los totales actuales se calculan desde pedidos guardados y no equivalen a una liquidación contable ni a pagos procesados.
 
-PRIMER ACCESO
-- Administrador: usuario `admin` (o el valor configurado en ADMIN_USERNAME), contraseña ADMIN_PASSWORD.
-- Entra como administrador y crea una cuenta para cada dueño desde “Crear cuenta de dueño o repartidor”.
-- El dueño entra con el nombre de usuario y contraseña que le entregaste.
-- Dentro de su panel puede crear su negocio, modificarlo y administrar sus platos y precios.
-- El cliente se registra desde “Crear cuenta de cliente” y luego entra con su usuario y contraseña.
+HORARIOS
+La variable BUSINESS_TIMEZONE determina la zona horaria usada para filtrar negocios. El archivo render.yaml propone America/Martinique. Si la mayoría de negocios está en otro territorio, cambia esta variable en Render por su zona IANA adecuada. Un negocio sin ambos horarios configurados no se filtra por hora; se puede desactivar con el interruptor Activo.
 
-IMPORTANTE SOBRE CUENTAS EXISTENTES
-- La migración asigna como username el teléfono de las cuentas antiguas que no tenían nombre de usuario. Por eso, esas cuentas pueden iniciar sesión usando el teléfono como usuario.
-- Si ADMIN_USERNAME está configurado como `admin`, el administrador puede entrar con `admin` y la contraseña configurada en ADMIN_PASSWORD.
-- Los restaurantes de demostración antiguos quedan sin propietario asignado y siguen visibles para clientes y administrables por el administrador. Cada dueño puede crear su propio restaurante desde su panel.
-- Las contraseñas nunca se guardan en texto plano; el servidor guarda hashes bcrypt.
+DESPLIEGUE EN RENDER SIN BORRAR DATOS
+1. Descarga el ZIP de esta versión y descomprímelo.
+2. Entra en la carpeta interior foodtrack.
+3. Copia SU CONTENIDO directamente a la raíz del repositorio GitHub existente. server.js, package.json, index.html y render.yaml deben quedar en la raíz del repositorio, no dentro de otra carpeta foodtrack.
+4. Conserva la carpeta oculta .git de tu repositorio local. No reemplaces ni borres .git.
+5. En PowerShell, desde la carpeta local del repositorio:
+   git status
+   git add .
+   git commit -m "FoodTrack Pro v3: perfiles y control de cuentas"
+   git push origin main
+   Si tu rama se llama master, usa git push origin master.
+6. Espera a que Render termine el despliegue y quede Live.
+7. Comprueba https://TU-DOMINIO/api/health. Debe responder {"ok":true,"database":"connected"}.
 
-BASE DE DATOS Y ALCANCE
-- PostgreSQL guarda cuentas, estado de restaurantes/menús/pedidos y ubicaciones GPS.
-- La aplicación no procesa pagos reales ni liquida automáticamente las comisiones.
-- El GPS requiere permiso del navegador y HTTPS; se comparte mientras el repartidor mantiene activa la aplicación.
-- Configura backups de PostgreSQL desde Render para proteger la información.
+VARIABLES DE RENDER
+Deben existir DATABASE_URL, JWT_SECRET, ADMIN_USERNAME, ADMIN_PHONE y ADMIN_PASSWORD. Para la zona horaria, BUSINESS_TIMEZONE. NO cambies DATABASE_URL ni JWT_SECRET en una instalación con datos existentes. No compartas capturas donde aparezcan secretos.
+
+ADMINISTRADOR
+Usuario: el valor de ADMIN_USERNAME (por defecto, admin).
+Contraseña: el valor de ADMIN_PASSWORD configurado en Render. No hay una contraseña universal. Si no existe ADMIN_PHONE y ADMIN_PASSWORD, el administrador inicial no se crea.
+
+SEGURIDAD Y DATOS
+- El administrador no puede leer contraseñas de texto claro ni hashes desde la interfaz. Puede establecer una nueva contraseña.
+- El mínimo de 4 caracteres es débil; se implementó por petición expresa, pero recomendamos al menos 10-12 caracteres.
+- No borres la base de datos de Render ni cambies DATABASE_URL/JWT_SECRET durante esta actualización.
+- Haz una copia de seguridad de PostgreSQL antes de desplegar cambios importantes.
+- La aplicación aún no procesa pagos reales ni liquida comisiones automáticamente.

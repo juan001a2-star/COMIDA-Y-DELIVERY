@@ -24,6 +24,12 @@ services:
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
+      - key: WEB_PUSH_PUBLIC_KEY
+        sync: false
+      - key: WEB_PUSH_PRIVATE_KEY
+        sync: false
+      - key: WEB_PUSH_SUBJECT
+        sync: false
 
 databases:
   - name: foodtrack-db

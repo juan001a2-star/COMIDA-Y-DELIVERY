@@ -52,3 +52,16 @@ SEGURIDAD Y DATOS
 - No borres la base de datos de Render ni cambies DATABASE_URL/JWT_SECRET durante esta actualización.
 - Haz una copia de seguridad de PostgreSQL antes de desplegar cambios importantes.
 - La aplicación aún no procesa pagos reales ni liquida comisiones automáticamente.
+
+
+ACTUALIZACIÓN v3.1 — ALERTAS DE PEDIDOS Y MENÚ
+
+- Al crear un pedido, el servidor genera un evento privado únicamente para la cuenta dueña del negocio asociado.
+- El dueño recibe alerta sonora y vibración cuando FoodTrack está abierto y la sesión del dueño está activa. Se solicita permiso para notificaciones del navegador; la vibración depende de que el dispositivo/navegador la admita.
+- Los repartidores no reciben el pedido al crearse. El estado del pedido se comparte con ellos cuando queda listo y aparece como disponible para recogida.
+- Cuando el dueño acepta el pedido (lo pasa a preparación) o lo marca como listo, el cliente recibe una notificación privada dentro de la aplicación mientras tenga sesión activa.
+- El dueño puede eliminar platos desde Mi menú. La eliminación requiere confirmación y no modifica el detalle histórico guardado dentro de pedidos anteriores.
+- Se añadió la tabla app_events en PostgreSQL mediante migración automática. No borra tablas ni datos existentes.
+
+ACTUALIZACIÓN v3.3 — WEB PUSH SIN FIREBASE
+Para activar notificaciones push sin Firebase, sigue las instrucciones de LEEME_WEB_PUSH.txt. Configura WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY y WEB_PUSH_SUBJECT en Render. La clave privada debe permanecer secreta y nunca subirse a GitHub. No cambies DATABASE_URL ni JWT_SECRET.

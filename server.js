@@ -5,6 +5,42 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const path = require('path');
+const webpush = require('web-push');
+
+let webPushConfigured = false;
+function configureWebPush() {
+  const publicKey = process.env.WEB_PUSH_PUBLIC_KEY || '';
+  const privateKey = process.env.WEB_PUSH_PRIVATE_KEY || '';
+  const subject = process.env.WEB_PUSH_SUBJECT || 'mailto:admin@foodtrack.local';
+  if (!publicKey || !privateKey) return false;
+  try {
+    if (!webPushConfigured) {
+      webpush.setVapidDetails(subject, publicKey, privateKey);
+      webPushConfigured = true;
+    }
+    return true;
+  } catch (e) {
+    console.error('No se pudo configurar Web Push:', e.message);
+    return false;
+  }
+}
+async function sendPushToUser(userId, title, body, data = {}) {
+  if (!configureWebPush()) return;
+  const found = await pool.query('SELECT id, subscription FROM push_subscriptions WHERE user_id=$1', [userId]);
+  if (!found.rows.length) return;
+  const payload = JSON.stringify({ title, body, icon: '/icon-192.png', badge: '/icon-192.png', tag: String(data.tag || 'foodtrack-update'), data });
+  for (const row of found.rows) {
+    try {
+      await webpush.sendNotification(row.subscription, payload, { TTL: 60 * 60 * 24 });
+    } catch (e) {
+      if (e.statusCode === 404 || e.statusCode === 410) {
+        await pool.query('DELETE FROM push_subscriptions WHERE id=$1', [row.id]);
+      } else {
+        console.error('Error enviando Web Push:', e.statusCode || '', e.message);
+      }
+    }
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +74,17 @@ async function initDb() {
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
   await pool.query("INSERT INTO app_state(id,payload) VALUES(1,'{}'::jsonb) ON CONFLICT(id) DO NOTHING");
+  await pool.query(`CREATE TABLE IF NOT EXISTS app_events (
+    id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    event_type TEXT NOT NULL, payload JSONB NOT NULL DEFAULT '{}'::jsonb, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), read_at TIMESTAMPTZ
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS app_events_user_id_id_idx ON app_events(user_id,id)');
+  await pool.query(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id BIGSERIAL PRIMARY KEY, user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE, subscription JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await pool.query('CREATE INDEX IF NOT EXISTS push_subscriptions_user_id_idx ON push_subscriptions(user_id)');
   await pool.query(`CREATE TABLE IF NOT EXISTS driver_locations (
     user_id BIGINT PRIMARY KEY REFERENCES app_users(id) ON DELETE CASCADE,
     lat DOUBLE PRECISION NOT NULL, lng DOUBLE PRECISION NOT NULL,
@@ -65,6 +112,28 @@ app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ok: true, database: 'connected' }); }
   catch { res.status(503).json({ ok: false, database: 'unavailable' }); }
 });
+// Configuración pública de Web Push. La clave privada solo permanece en el servidor.
+app.get('/api/push/config', (_req, res) => {
+  const publicKey = process.env.WEB_PUSH_PUBLIC_KEY || '';
+  res.json({ enabled: Boolean(publicKey && process.env.WEB_PUSH_PRIVATE_KEY && configureWebPush()), publicKey });
+});
+app.post('/api/push/subscribe', auth, async (req, res) => {
+  try {
+    if (!['dueno','cliente'].includes(req.auth.role)) return res.status(403).json({ error: 'Las notificaciones están disponibles para clientes y dueños.' });
+    if (!configureWebPush()) return res.status(503).json({ error: 'Web Push todavía no está configurado en Render.' });
+    const sub = req.body?.subscription;
+    if (!sub || typeof sub.endpoint !== 'string' || !sub.endpoint.startsWith('https://') || !sub.keys?.p256dh || !sub.keys?.auth) return res.status(400).json({ error: 'Suscripción de notificaciones no válida.' });
+    if (JSON.stringify(sub).length > 10000) return res.status(400).json({ error: 'Suscripción demasiado grande.' });
+    await pool.query(`INSERT INTO push_subscriptions(user_id,endpoint,subscription) VALUES($1,$2,$3::jsonb)
+      ON CONFLICT(endpoint) DO UPDATE SET user_id=EXCLUDED.user_id,subscription=EXCLUDED.subscription,updated_at=NOW()`, [req.auth.id, sub.endpoint, JSON.stringify(sub)]);
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'No se pudo registrar este dispositivo.' }); }
+});
+app.delete('/api/push/subscribe', auth, async (req, res) => {
+  try { const endpoint = String(req.body?.endpoint || '').trim(); if (endpoint) await pool.query('DELETE FROM push_subscriptions WHERE user_id=$1 AND endpoint=$2', [req.auth.id, endpoint]); res.json({ ok: true }); }
+  catch (e) { console.error(e); res.status(500).json({ error: 'No se pudo desactivar este dispositivo.' }); }
+});
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, address = '', phone, password } = req.body || {};
@@ -149,8 +218,13 @@ function visibleState(payload, user) {
     const ids = new Set(state.restaurants.map(r => String(r.id)));
     state.orders = (state.orders || []).filter(o => ids.has(String(o.restId)));
     state.myDeliveries = [];
+    state.notifications = [];
   }
-  if (user.role === 'repartidor') state.myDeliveries = (state.myDeliveries || []).filter(o => Number(o.driverId) === Number(user.id));
+  if (user.role === 'repartidor') {
+    state.orders = (state.orders || []).filter(o => o.status === 'listo' && !o.driverId).map(o => ({id:o.id,rest:o.rest,restId:o.restId,client:o.client,phone:o.phone,addr:o.addr,total:o.total,pay:o.pay,status:o.status,items:o.items}));
+    state.myDeliveries = (state.myDeliveries || []).filter(o => Number(o.driverId) === Number(user.id));
+    state.notifications = [];
+  }
   return state;
 }
 app.get('/api/state', auth, async (req, res) => {
@@ -206,11 +280,38 @@ app.post('/api/orders', auth, async (req, res) => {
     if (req.auth.role !== 'cliente') return res.status(403).json({ error: 'Solo los clientes pueden crear pedidos.' });
     const o = req.body || {};
     if (!o.restId || !Array.isArray(o.items) || !o.items.length || !Number.isFinite(Number(o.total))) return res.status(400).json({ error: 'Pedido incompleto.' });
-    const saved = { ...o, id: Date.now(), phone: req.auth.phone, status: 'recibido', createdAt: new Date().toISOString() };
+    const stateQ = await pool.query('SELECT payload FROM app_state WHERE id=1');
+    const state = stateQ.rows[0]?.payload || {};
+    const business = (state.restaurants || []).find(r => String(r.id) === String(o.restId));
+    if (!business || business.blocked || business.ownerSuspended || business.isOpen === false || !business.ownerId) return res.status(400).json({ error: 'Este negocio no está disponible para recibir pedidos.' });
+    const saved = { ...o, id: Date.now(), phone: req.auth.phone, customerId: Number(req.auth.id), ownerId: Number(business.ownerId), status: 'recibido', createdAt: new Date().toISOString() };
     await pool.query("UPDATE app_state SET payload=jsonb_set(payload,'{orders}',COALESCE(payload->'orders','[]'::jsonb) || $1::jsonb,true),updated_at=NOW() WHERE id=1", [JSON.stringify([saved])]);
+    await pool.query('INSERT INTO app_events(user_id,event_type,payload) VALUES($1,$2,$3::jsonb)', [business.ownerId, 'new_order', JSON.stringify({orderId:saved.id,rest:business.name,total:saved.total,createdAt:saved.createdAt})]);
+    try { await sendPushToUser(business.ownerId, 'FoodTrack · Pedido nuevo', `Nuevo pedido #${saved.id} en ${business.name}.`, { type:'new_order', orderId:saved.id, restId:saved.restId, tag:`foodtrack-order-${saved.id}` }); }
+    catch (pushError) { console.error('No se pudo enviar push al dueño:', pushError.message); }
     res.status(201).json(saved);
   } catch (e) { console.error(e); res.status(500).json({ error: 'No se pudo registrar el pedido.' }); }
 });
+// Eventos privados: cada usuario recibe únicamente sus propias notificaciones.
+app.get('/api/events', auth, async (req,res)=>{
+  try { const after=Math.max(0,Number(req.query.after)||0); const r=await pool.query('SELECT id,event_type,payload,created_at FROM app_events WHERE user_id=$1 AND id>$2 ORDER BY id ASC LIMIT 100',[req.auth.id,after]); res.json(r.rows); }
+  catch(e){console.error(e);res.status(500).json({error:'No se pudieron consultar las notificaciones.'});}
+});
+app.post('/api/orders/:id/status', auth, async(req,res)=>{
+  if(req.auth.role!=='dueno' && req.auth.role!=='admin') return res.status(403).json({error:'Solo el dueño del negocio puede actualizar el pedido.'});
+  const next=String(req.body?.status||''); if(!['preparacion','listo','cancelado'].includes(next)) return res.status(400).json({error:'Estado no válido.'});
+  const c=await pool.connect(); try { await c.query('BEGIN'); const q=await c.query('SELECT payload FROM app_state WHERE id=1 FOR UPDATE'); const state=q.rows[0]?.payload||{}; const order=(state.orders||[]).find(o=>String(o.id)===String(req.params.id)); if(!order){await c.query('ROLLBACK');return res.status(404).json({error:'Pedido no encontrado.'});}
+    const business=(state.restaurants||[]).find(r=>String(r.id)===String(order.restId)); if(req.auth.role==='dueno' && (!business || Number(business.ownerId)!==Number(req.auth.id))){await c.query('ROLLBACK');return res.status(403).json({error:'Este pedido no pertenece a tu negocio.'});}
+    if(next==='preparacion' && order.status!=='recibido'){await c.query('ROLLBACK');return res.status(409).json({error:'El pedido ya fue actualizado.'});}
+    order.status=next; order.updatedAt=new Date().toISOString(); await c.query('UPDATE app_state SET payload=$1::jsonb,updated_at=NOW() WHERE id=1',[JSON.stringify(state)]);
+    const message=next==='preparacion'?'El negocio aceptó tu pedido y comenzó a prepararlo.':next==='listo'?'Tu pedido está listo.':'El negocio canceló tu pedido.';
+    if(order.customerId) await c.query('INSERT INTO app_events(user_id,event_type,payload) VALUES($1,$2,$3::jsonb)',[order.customerId,'order_status',JSON.stringify({orderId:order.id,status:next,rest:order.rest,message})]);
+    await c.query('COMMIT');
+    if(order.customerId) { try { await sendPushToUser(order.customerId, 'FoodTrack · Estado de tu pedido', message, { type:'order_status', orderId:order.id, status:next, tag:`foodtrack-status-${order.id}-${next}` }); } catch (pushError) { console.error('No se pudo enviar push al cliente:', pushError.message); } }
+    res.json({ok:true,order});
+  }catch(e){await c.query('ROLLBACK');console.error(e);res.status(500).json({error:'No se pudo actualizar el pedido.'});}finally{c.release();}
+});
+
 app.post('/api/location', auth, async (req, res) => {
   try {
     if (req.auth.role !== 'repartidor' && req.auth.role !== 'admin') return res.status(403).json({ error: 'Solo las cuentas de repartidor pueden compartir GPS.' });

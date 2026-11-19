@@ -1,16 +1,21 @@
 {
   "name": "foodtrack-pro-render",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "private": true,
-  "description": "FoodTrack Pro con perfiles, gestión de cuentas, negocios y PostgreSQL para Render",
+  "description": "FoodTrack Pro con notificaciones Web Push VAPID desde Render",
   "main": "server.js",
-  "scripts": {"start": "node server.js"},
-  "engines": {"node": ">=20"},
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "web-push": "^3.6.7"
   }
 }

@@ -69,6 +69,7 @@ header{background:rgba(22,32,51,.97);backdrop-filter:blur(12px);padding:15px max
 header h1{font-size:1.45rem;letter-spacing:-.5px}.role-btn{border-radius:12px;padding:9px 12px}.role-btn.active{color:var(--tx);font-weight:700}
 main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#202d45,#394d69);color:white;padding:28px 32px;border-radius:22px;display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;overflow:hidden;box-shadow:0 14px 34px #17203320}.hero h2{font-size:1.65rem;margin:5px 0}.hero p{color:#dce4ef}.eyebrow{font-size:.7rem;letter-spacing:2px;color:#ffb18c;font-weight:800}.hero-mark{font-size:5rem;filter:drop-shadow(0 8px 10px #0004)}.toolbar{display:grid;grid-template-columns:1fr 220px;gap:10px;margin-bottom:22px}.toolbar input,.toolbar select{margin:0;background:#fff}.card{border-radius:18px;box-shadow:0 5px 18px #1720330c;border:1px solid #e9edf3}.card:hover{transform:translateY(-5px);box-shadow:0 14px 28px #17203318}.card img{height:165px}.card-body{padding:17px}.panel{border-radius:18px;box-shadow:0 5px 20px #1720330c;border:1px solid #e9edf3;padding:21px}.btn{border-radius:12px;background:linear-gradient(135deg,#f06432,#ff874e);box-shadow:0 4px 10px #f0643228}.btn.ghost{box-shadow:none}.modal-box{border-radius:20px;box-shadow:0 20px 60px #0003}.status{border-radius:7px}.gps-box{background:#f2f5f9;padding:12px;border-radius:12px;margin-top:12px;word-break:break-word}.user-chip{background:#ffffff20}.menu-item{padding:13px 0}.toast{border-radius:14px}
 @media(max-width:700px){header{padding:12px}.roles{width:100%}.role-btn{font-size:.76rem;padding:7px 9px}main{margin:16px auto}.hero{padding:22px}.hero h2{font-size:1.25rem}.hero-mark{font-size:3rem}.toolbar{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}.card img{height:110px}.card-body{padding:11px}}
+.hours-row{background:#f7f8fb;padding:8px;border-radius:10px}.hours-row input{margin:4px 0 0;padding:8px;font-size:.86rem}
 </style>
 </head>
 <body>
@@ -81,6 +82,7 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
     <span class="user-chip" id="userChip" onclick="openReg()">Iniciar sesión</span>
     <button class="role-btn" id="profileBtn" onclick="openProfile()" style="display:none">Mi perfil</button>
     <button class="role-btn" id="logoutBtn" onclick="logoutAccount()" style="display:none">Cerrar sesión</button>
+    <select id="languageSelect" aria-label="Idioma" onchange="setLanguage(this.value)" style="width:auto;margin:0;padding:7px;border-radius:10px"><option value="es">ES</option><option value="en">EN</option><option value="fr">FR</option></select>
   </div>
 </header>
 
@@ -91,7 +93,7 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   <div class="toolbar"><input id="restSearch" placeholder="Buscar restaurante o comida…" oninput="renderRests()"><select id="restFilter" onchange="renderRests()"><option value="">Todas las categorías</option><option value="burger">Hamburguesas</option><option value="pizza">Pizza</option><option value="taco">Mexicana</option><option value="sushi">Sushi</option></select></div>
   <h2>Restaurantes cerca de ti 📍</h2><div class="grid" id="restGrid"></div>
   <div class="panel" style="margin-top:20px">
-    <h2>Mis pedidos</h2>
+    <div class="row" style="justify-content:space-between;align-items:center"><h2>Mis pedidos</h2><button class="btn small ghost" onclick="clearMyOrderHistory()">Ocultar mi historial</button></div>
     <div id="myOrders"><p class="mut">Aún no has hecho pedidos.</p></div>
   </div>
 </div>
@@ -104,9 +106,9 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
       <select id="ownerSel" onchange="renderOwner()" style="width:auto;min-width:200px;margin:0;display:none"></select>
     </div>
     <div id="ownerInfo"></div><div id="ownerStats"></div>
+    <div class="panel" style="margin-top:12px;background:#fbfcfe"><h3>🔔 Avisos de pedidos</h3><div class="row"><label class="mut">Tono <select id="alertTone" onchange="saveAlertTone(this.value)" style="width:auto;margin:0"><option value="urgent">Urgente</option><option value="bell">Campana</option><option value="double">Doble tono</option><option value="siren">Alarma</option><option value="soft">Suave</option></select></label><button class="btn small ghost" onclick="playTestAlert()">Probar sonido</button></div><p class="mut" style="font-size:.8rem">La vibración depende del dispositivo y el volumen final depende del sistema.</p></div>
     <div class="row" style="margin-top:10px">
       <button class="btn small ghost" onclick="openBizForm(true)">✏️ Modificar negocio</button>
-      <button class="btn small" onclick="openBizForm(false)">＋ Crear negocio</button>
     </div>
   </div>
   <div class="panel">
@@ -146,6 +148,8 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
     <div id="adminStats" class="mut"></div>
   </div>
   <div class="panel"><h2>💰 Comisiones y ganancias</h2><div id="adminFinance"></div></div>
+  <div class="panel"><div class="row" style="justify-content:space-between"><h2>🏪 Crear / administrar negocios</h2><button class="btn small" onclick="openBizForm(false)">＋ Crear negocio</button></div><p class="mut">Solo la administración puede registrar nuevos negocios y asignarlos a un dueño.</p></div>
+  <div class="panel"><h2>💳 Suscripciones y pagos de restaurantes</h2><p class="mut">El bloqueo por impago se aplica tras 7 días completos de gracia.</p><div id="adminBilling"><p class="mut">Cargando suscripciones…</p></div></div>
   <div class="panel"><div class="row" style="justify-content:space-between"><h2>📍 Ubicaciones de repartidores</h2><button class="btn small ghost" onclick="renderDriverLocations()">Actualizar GPS</button></div><div id="driverLocations"><p class="mut">Pulsa actualizar para consultar las ubicaciones.</p></div></div>
   <div class="panel">
     <h2>👥 Crear cuenta de dueño o repartidor</h2>
@@ -188,6 +192,8 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   <input id="cPhone" placeholder="Teléfono">
   <select id="cPay"><option value="Verifone (tarjeta en la entrega)">Verifone 💳 (pago en la entrega)</option><option value="Efectivo">Efectivo 💵</option></select>
   <p class="mut" style="font-size:.82rem;margin-bottom:10px">💳 El repartidor llevará el Verifone para cobrarte directamente al entregar.</p>
+  <label>¿A qué hora deseas que esté listo? <select id="orderScheduleMode" onchange="toggleOrderSchedule()"><option value="now">Lo antes posible</option><option value="later">Programar pedido</option></select></label>
+  <div id="scheduledOrderBox" style="display:none"><label>Fecha y hora para que el pedido esté listo <input id="scheduledFor" type="datetime-local"></label><p id="orderEtaHelp" class="mut" style="font-size:.82rem">Debe haber al menos 15 minutos de antelación. La entrega a domicilio sumará el tiempo de trayecto.</p></div>
   <button class="btn" style="width:100%" onclick="placeOrder()">Confirmar pedido 🚀</button>
 </div></div>
 
@@ -236,7 +242,7 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
 
 <!-- MODAL negocio -->
 <div class="modal" id="m-profile"><div class="modal-box" style="max-width:440px"><button class="close" onclick="closeM('m-profile')">✕</button><h2>👤 Mi perfil</h2><input id="pName" placeholder="Nombre completo"><input id="pUsername" placeholder="Usuario"><input id="pPhone" placeholder="Teléfono"><input id="pAddress" placeholder="Dirección"><button class="btn" onclick="saveProfile()">Guardar perfil</button><hr><h3>Cambiar contraseña</h3><input id="pCurrentPassword" type="password" placeholder="Contraseña actual"><div class="row"><input id="pNewPassword" type="password" placeholder="Nueva contraseña (mínimo 4)" style="flex:1"><button class="btn small ghost" onclick="togglePasswordField('pNewPassword',this)">Mostrar</button></div><button class="btn" onclick="changeMyPassword()">Cambiar contraseña</button></div></div>
-<div class="modal" id="m-biz"><div class="modal-box" style="max-width:420px">
+<div class="modal" id="m-biz"><div class="modal-box" style="max-width:680px">
   <button class="close" onclick="closeM('m-biz')">✕</button>
   <h2 id="bizTitle">🏪 Crear negocio</h2>
   <input id="bName" placeholder="Nombre del negocio">
@@ -245,7 +251,11 @@ main{max-width:1160px;margin:28px auto}.hero{background:linear-gradient(120deg,#
   <input id="bSvc" placeholder="Servicios separados por coma (ej: Delivery propio, Retiro en local)">
   <input id="bPhone" placeholder="Teléfono del negocio">
   <input id="bWhatsapp" placeholder="WhatsApp del negocio">
-  <div class="row"><label class="mut">Abre <input id="bOpen" type="time"></label><label class="mut">Cierra <input id="bClose" type="time"></label></div><label class="mut"><input id="bActive" type="checkbox" checked style="width:auto"> Negocio activo / disponible</label>
+  <input id="bAddress" placeholder="Dirección del negocio (opcional)">
+  <label>Dueño asignado (solo administración) <select id="bOwner"><option value="">Sin asignar</option></select></label>
+  <h3 style="margin:12px 0 6px">Horarios semanales</h3><p class="mut" style="font-size:.82rem">Escribe uno o varios intervalos por día, separados por coma. Ejemplo: 08:00-12:00, 14:00-22:00. Deja vacío si ese día no abre.</p><div id="weeklyHoursEditor" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px"></div>
+  <div class="row"><label>Preparación (minutos) <input id="bPrepMinutes" type="number" min="15" max="240" value="15"></label><label>Trayecto delivery (minutos) <input id="bDeliveryMinutes" type="number" min="0" max="240" value="30"></label></div>
+  <label class="mut"><input id="bActive" type="checkbox" checked style="width:auto"> Negocio activo / disponible</label>
   <button class="btn" style="width:100%" onclick="saveBiz()">Guardar negocio 💾</button>
 </div></div>
 
@@ -312,7 +322,7 @@ $('restDetail').innerHTML=`
   <img src="${currentRest.img}" style="width:100%;height:160px;object-fit:cover;border-radius:12px" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=🍽️'">
   <h2 style="margin-top:10px">${currentRest.name}</h2>
   <p class="mut">${currentRest.desc}</p>
-  <p>${currentRest.phone?'📞 <a href="tel:'+currentRest.phone+'">'+currentRest.phone+'</a>':''} ${currentRest.whatsapp?' · <a target="_blank" rel="noopener" href="https://wa.me/'+currentRest.whatsapp.replace(/[^0-9]/g,'')+'">WhatsApp del negocio</a>':''}</p>
+  <p>${currentRest.address?'📍 '+currentRest.address+' · ':''}${currentRest.phone?'📞 <a href="tel:'+currentRest.phone+'">'+currentRest.phone+'</a>':''} ${currentRest.whatsapp?' · <a target="_blank" rel="noopener" href="https://wa.me/'+currentRest.whatsapp.replace(/[^0-9]/g,'')+'">WhatsApp del negocio</a>':''}</p>
   <p style="margin:6px 0 10px">${currentRest.svc.map(s=>`<span class="tag">${s}</span>`).join('')}</p>
   <h2>Menú</h2>
   ${currentRest.menu.filter(m=>m.av).map((m,i)=>`
@@ -352,13 +362,13 @@ function selectedOwnerRestaurant(){return restaurants.find(x=>String(x.id)==Stri
 function renderOwner(){const sel=$('ownerSel');const mine=restaurants.filter(r=>Number(r.ownerId)===Number(currentUser?.id));sel.innerHTML=mine.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');sel.style.display=mine.length>1?'block':'none';
  if(!mine.length){$('ownerInfo').innerHTML='<p class="mut">Todavía no tienes un negocio registrado. Crea tu primer restaurante para comenzar.</p>';$('ownerMenu').innerHTML='<p class="mut">Cuando crees tu negocio podrás agregar platos y precios aquí.</p>';$('ownerOrders').innerHTML='<p class="mut">Todavía no hay pedidos.</p>';return;}
  const prev=sel.value; if(prev&&mine.some(x=>String(x.id)===String(prev)))sel.value=prev;const r=selectedOwnerRestaurant();
- $('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por el administrador</span>':''} — ${r.desc}</p><p class="mut" style="margin-top:4px">Servicios: ${(r.svc||[]).join(' · ')}</p><p class="mut">Teléfono: ${r.phone||'No configurado'} · WhatsApp: ${r.whatsapp||'No configurado'} · Horario: ${r.openTime||'—'} a ${r.closeTime||'—'}</p>`;
+ $('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por el administrador</span>':''} — ${r.desc}</p><p class="mut" style="margin-top:4px">Servicios: ${(r.svc||[]).join(' · ')}</p><p class="mut">Dirección: ${r.address||'No configurada'}</p><p class="mut">Teléfono: ${r.phone||'No configurado'} · WhatsApp: ${r.whatsapp||'No configurado'} · Horario: ${r.openTime||'—'} a ${r.closeTime||'—'}</p>`;
  renderOwnerStats(r);renderOwnerOrders();renderOwnerMenu(r)}
 function orderDate(o){const raw=o.createdAt||o.t;const d=raw?new Date(raw):new Date(0);return isNaN(d.getTime())?new Date():d}
 function renderOwnerStats(r){const mine=orders.filter(o=>String(o.restId)===String(r.id)&&o.status!=='cancelado');const now=new Date(),day=mine.filter(o=>orderDate(o).toDateString()===now.toDateString()),month=mine.filter(o=>orderDate(o).getFullYear()===now.getFullYear()&&orderDate(o).getMonth()===now.getMonth());const sum=a=>a.reduce((v,o)=>v+Number(o.total||0),0);$('ownerStats').innerHTML=`<div class="grid" style="margin-top:12px"><div class="panel"><span class="mut">Ventas de hoy</span><h2>${fmt(sum(day))}</h2><small>${day.length} pedidos</small></div><div class="panel"><span class="mut">Ventas del mes</span><h2>${fmt(sum(month))}</h2><small>${month.length} pedidos</small></div><div class="panel"><span class="mut">Ventas acumuladas</span><h2>${fmt(sum(mine))}</h2><small>${mine.length} pedidos</small></div></div>`}
 function renderOwnerOrders(){const r=selectedOwnerRestaurant();const mine=r?orders.filter(o=>String(o.restId)===String(r.id)&&!['entregado','cancelado'].includes(o.status)):[];
  $('ownerOrders').innerHTML=mine.length?mine.map(o=>`
-<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span><br><span class="mut" style="font-size:.82rem">${(o.items||[]).map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}${o.status==='listo'?'<span class="mut" style="font-size:.82rem">Esperando repartidor…</span>':''}${o.status==='aceptado'?`<button class="btn small ok" onclick="setStatus(${o.id},'entregado')">Confirmar entrega 🎉</button>`:''}</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>'}
+<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span><br><span class="mut" style="font-size:.82rem">${(o.items||[]).map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}${o.status==='listo'?'<span class="mut" style="font-size:.82rem">Esperando repartidor…</span>':''}${o.status==='aceptado'?`<span class="mut">Repartidor asignado: ${o.driverName||'en camino'} · entrega en curso</span>`:''}</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>'}
 function renderOwnerMenu(r){$('ownerMenu').innerHTML=(r.menu||[]).map((m,i)=>`
 <div class="menu-item">${m.img?`<img src="${m.img}" alt="${m.n}" style="width:100%;max-height:130px;object-fit:cover;border-radius:10px;margin-bottom:8px">`:''}<div class="top"><div class="info"><b>${m.n}</b> ${m.av?'':'<span class="status st-recibido">agotado</span>'}<br><span class="mut" style="font-size:.8rem">${m.d||''}</span></div></div>${(m.opts||[]).map(o=>`<div class="opt"><span>📦 ${o.l}</span><b class="price">${fmt(o.p)}</b></div>`).join('')}
 <div class="row" style="margin-top:6px"><button class="btn small ghost" onclick="openEditDish(${i})">✏️ Editar</button><button class="btn small ${m.av?'warn':'ok'}" onclick="toggleDish(${r.id},${i})">${m.av?'Agotar':'Activar'}</button><button class="btn small bad" onclick="deleteDish(${r.id},${i})">🗑️ Eliminar</button></div></div>`).join('')||'<p class="mut">Todavía no has agregado platos.</p>'}
@@ -412,7 +422,7 @@ function armAlertAudio(){try{const AC=window.AudioContext||window.webkitAudioCon
 document.addEventListener('pointerdown',armAlertAudio,{once:true});
 function alertNewOrder(ev){const p=ev.payload||{};const msg='Nuevo pedido #'+p.orderId+' · '+(p.rest||'Tu negocio')+' · '+fmt(p.total||0);try{const AC=window.AudioContext||window.webkitAudioContext;if(AC){if(!alertAudioContext)alertAudioContext=new AC();if(alertAudioContext.state==='suspended')alertAudioContext.resume();const osc=alertAudioContext.createOscillator(),gain=alertAudioContext.createGain();osc.connect(gain);gain.connect(alertAudioContext.destination);osc.frequency.value=880;gain.gain.value=.16;osc.start();osc.stop(alertAudioContext.currentTime+.45)}}catch(_){}if(navigator.vibrate)navigator.vibrate([350,150,350,150,600]);if('Notification' in window&&Notification.permission==='granted'){try{new Notification('FoodTrack · Pedido nuevo',{body:msg,icon:'./icon-192.png',tag:'foodtrack-order-'+p.orderId})}catch(_){}}toast('🔔 '+msg,'ok');}
 async function primePrivateEvents(){try{const events=await api('/api/events?after=0');for(const ev of events)lastEventId=Math.max(lastEventId,Number(ev.id)||0)}catch(_){}}
-async function pollPrivateEvents(){if(!API_TOKEN)return;try{const events=await api('/api/events?after='+lastEventId);for(const ev of events){lastEventId=Math.max(lastEventId,Number(ev.id)||0);if(ev.event_type==='new_order'&&role==='dueno'){alertNewOrder(ev);const state=await api('/api/state');if(Array.isArray(state.orders))orders=state.orders;if(Array.isArray(state.restaurants))restaurants=state.restaurants;renderOwnerOrders()}if(ev.event_type==='order_status'&&role==='cliente'){const p=ev.payload||{},o=orders.find(x=>String(x.id)===String(p.orderId));if(o)o.status=p.status;addNotif('🔔 <b>Pedido #'+p.orderId+':</b> '+p.message);renderMyOrders();toast(p.message,'ok')}}}catch(e){console.warn('No se pudieron consultar notificaciones',e)}}
+async function pollPrivateEvents(){if(!API_TOKEN)return;try{const events=await api('/api/events?after='+lastEventId);for(const ev of events){lastEventId=Math.max(lastEventId,Number(ev.id)||0);if(ev.event_type==='new_order'&&role==='dueno'){alertNewOrder(ev);const state=await api('/api/state');if(Array.isArray(state.orders))orders=state.orders;if(Array.isArray(state.restaurants))restaurants=state.restaurants;renderOwnerOrders()}if((ev.event_type==='driver_assigned'||ev.event_type==='delivery_completed')&&role==='dueno'){const p=ev.payload||{};addNotif(ev.event_type==='driver_assigned'?`🛵 Repartidor asignado al pedido #${p.orderId}: ${p.driverName||'Repartidor'}.`:`✅ Pedido #${p.orderId} entregado.`);const state=await api('/api/state');if(Array.isArray(state.orders))orders=state.orders;renderOwnerOrders()}if(ev.event_type==='order_status'&&role==='cliente'){const p=ev.payload||{},o=orders.find(x=>String(x.id)===String(p.orderId));if(o)o.status=p.status;playNewOrderTone();if(navigator.vibrate)navigator.vibrate([220,100,220]);addNotif('🔔 <b>Pedido #'+p.orderId+':</b> '+p.message);renderMyOrders();toast(p.message,'ok')}}}catch(e){console.warn('No se pudieron consultar notificaciones',e)}}
 
 
 /* REPARTIDOR */
@@ -509,7 +519,7 @@ openReg=function(){$('m-reg').classList.add('open');showLogin()};
 async function hashPassword(value){if(!crypto.subtle)throw new Error('Usa la aplicación desde HTTPS o localhost para crear contraseñas protegidas.');const bytes=new TextEncoder().encode(value);const digest=await crypto.subtle.digest('SHA-256',bytes);return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 async function loginAccount(){try{const result=await api('/api/auth/login',{method:'POST',body:JSON.stringify({login:$('loginPhone').value.trim(),password:$('loginPassword').value})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;lastEventId=0;const d=await api('/api/state');if(Array.isArray(d.restaurants))restaurants=d.restaurants;if(Array.isArray(d.orders))orders=d.orders;if(Array.isArray(d.myDeliveries))myDeliveries=d.myDeliveries;if(Array.isArray(d.notifications))notifications=d.notifications;if(currentUser.role==='admin'&&(!Array.isArray(d.restaurants)||!d.restaurants.length)){await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});}afterLogin();await primePrivateEvents();if(currentUser.role==='dueno')requestOwnerAlerts();renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}}
 function afterLogin(){closeM('m-reg');$('userChip').textContent='👤 '+currentUser.name.split(' ')[0]+' · '+({admin:'Administrador',dueno:'Dueño',cliente:'Cliente',repartidor:'Repartidor'}[currentUser.role]||currentUser.role);$('logoutBtn').style.display='inline-block';$('profileBtn').style.display='inline-block';$('bellBtn').style.display='inline-block';$('pushBtn').style.display=['dueno','cliente'].includes(currentUser.role)?'inline-block':'none';$('pushBtn').textContent='🔔 Activar avisos'; $('cName').value=currentUser.name;$('cAddr').value=currentUser.addr||'';$('cPhone').value=currentUser.phone;persist();switchRole(currentUser.role);toast('Bienvenido, '+currentUser.name,'ok')}
-sendCode=async function(){const n=$('rName').value.trim(),un=$('rUsername').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim(),pw=$('rPassword').value;if(!n||!un||!a||!ph||!pw)return toast('Completa nombre, usuario, dirección, teléfono y contraseña','warn');if(pw.length<4)return toast('La contraseña debe tener al menos 4 caracteres','warn');try{const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name:n,username:un,address:a,phone:ph,password:pw})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;const state=await api('/api/state');if(!Array.isArray(state.restaurants)||!state.restaurants.length)await api('/api/state/bootstrap',{method:'POST',body:JSON.stringify({restaurants})});afterLogin();await primePrivateEvents();addNotif('Cuenta creada y guardada en la base de datos.');renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}};
+sendCode=async function(){const n=$('rName').value.trim(),un=$('rUsername').value.trim(),a=$('rAddr').value.trim(),ph=$('rPhone').value.trim(),pw=$('rPassword').value;if(!n||!un||!a||!ph||!pw)return toast('Completa nombre, usuario, dirección, teléfono y contraseña','warn');if(pw.length<4)return toast('La contraseña debe tener al menos 4 caracteres','warn');try{const result=await api('/api/auth/register',{method:'POST',body:JSON.stringify({name:n,username:un,address:a,phone:ph,password:pw})});API_TOKEN=result.token;localStorage.setItem(DB_KEY,API_TOKEN);currentUser=result.user;await api('/api/state');afterLogin();await primePrivateEvents();addNotif('Cuenta creada y guardada en la base de datos.');renderRests();renderMyOrders()}catch(e){toast(e.message,'warn')}};
 verifyCodeFn=function(){loginAccount()};
 function startDriverGPS(){if(!API_TOKEN)return toast('Inicia sesión como repartidor para compartir GPS','warn');if(!navigator.geolocation)return toast('Este navegador no admite geolocalización','warn');if(!window.isSecureContext)return toast('El GPS requiere HTTPS o localhost','warn');$('gpsState').textContent='Solicitando permiso…';driverWatch=navigator.geolocation.watchPosition(async pos=>{driverCoords={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),at:new Date().toISOString()};$('gpsState').textContent='GPS activo · precisión ±'+driverCoords.accuracy+' m';$('gpsMap').innerHTML='📍 '+driverCoords.lat.toFixed(5)+', '+driverCoords.lng.toFixed(5)+'<br><a target="_blank" rel="noopener" href="https://www.google.com/maps?q='+driverCoords.lat+','+driverCoords.lng+'">Abrir ubicación en Google Maps</a>';try{await api('/api/location',{method:'POST',body:JSON.stringify(driverCoords)})}catch(e){toast('No se pudo enviar la ubicación: '+e.message,'warn')}},err=>{$('gpsState').textContent='No se pudo obtener ubicación';toast(err.message,'warn')},{enableHighAccuracy:true,maximumAge:5000,timeout:15000})}
 function stopDriverGPS(){if(driverWatch!==null)navigator.geolocation.clearWatch(driverWatch);driverWatch=null;$('gpsState').textContent='GPS apagado';}
@@ -531,11 +541,223 @@ async function assignExistingRestaurant(){try{const id=$('assignRest').value,own
 function commissionFor(o){return Number(o.total||0)*0.10}
 function renderFinance(){const valid=orders.filter(o=>o.status!=='cancelado');const gross=valid.reduce((s,o)=>s+Number(o.total||0),0),fee=valid.reduce((s,o)=>s+commissionFor(o),0);$('adminFinance').innerHTML='<div class="grid"><div><span class="mut">Ventas registradas</span><h2>'+fmt(gross)+'</h2></div><div><span class="mut">Comisión plataforma (10%)</span><h2 class="price">'+fmt(fee)+'</h2></div><div><span class="mut">Restaurantes (90%)</span><h2>'+fmt(gross-fee)+'</h2></div></div><p class="mut">Cálculo ilustrativo sobre pedidos no cancelados. No procesa cobros ni liquidaciones reales.</p>'}
 const oldRenderAdmin=renderAdmin;renderAdmin=function(){oldRenderAdmin();renderFinance();renderDriverLocations();renderAdminUsers();renderAdminBusinessStats()};
-function renderAdminBusinessStats(){const box=$('adminBizStats');if(!box)return;box.innerHTML='<h3>Ventas por negocio</h3>'+(restaurants||[]).map(r=>{const os=orders.filter(o=>String(o.restId)===String(r.id)&&o.status!=='cancelado');return `<div class="menu-item"><b>${r.name}</b> · ${os.length} pedidos · <b>${fmt(os.reduce((s,o)=>s+Number(o.total||0),0))}</b></div>`}).join('')||'<p class="mut">Sin negocios registrados.</p>'}
+function renderAdminBusinessStats(){const box=$('adminBizStats');if(!box)return;box.innerHTML='<h3>Ventas e historial por negocio</h3>'+(restaurants||[]).map(r=>{const os=orders.filter(o=>String(o.restId)===String(r.id));const gross=os.filter(o=>o.status!=='cancelado').reduce((s,o)=>s+Number(o.total||0),0);return `<div class="menu-item"><b>${r.name}</b> · ${os.length} pedidos registrados · Ventas no canceladas: <b>${fmt(gross)}</b>${os.length?`<details style="margin-top:6px"><summary>Ver historial de pedidos</summary>${os.slice().reverse().map(o=>`<p class="mut" style="padding:5px 0;border-bottom:1px solid #eee">#${o.id} · ${new Date(o.createdAt||Date.now()).toLocaleString()} · ${o.client||'Cliente'} · ${fmt(o.total)} · ${o.status||'—'}<br>${(o.items||[]).map(i=>`${i.q}× ${i.n} (${i.l})`).join(', ')}</p>`).join('')}</details>`:''}</div>`}).join('')||'<p class="mut">Sin negocios registrados.</p>'}
 async function renderDriverLocations(){const box=$('driverLocations');if(!box)return;try{const rows=await api('/api/locations');box.innerHTML=rows.length?rows.map(x=>`<div class="menu-item"><b>${x.name}</b><p class="mut">${Number(x.lat).toFixed(5)}, ${Number(x.lng).toFixed(5)} · precisión ±${x.accuracy||'?'} m</p><a target="_blank" rel="noopener" href="https://www.google.com/maps?q=${x.lat},${x.lng}">Abrir en Google Maps</a><p class="mut">Actualizado: ${new Date(x.recorded_at).toLocaleString()}</p></div>`).join(''):'<p class="mut">Todavía no hay ubicaciones compartidas.</p>'}catch(e){box.innerHTML='<p class="mut">'+e.message+'</p>'}}
 const oldRenderRests=renderRests;renderRests=function(){const q=($('restSearch')?.value||'').toLowerCase(),cat=$('restFilter')?.value||'';$('restGrid').innerHTML=restaurants.filter(r=>!r.blocked&&(!q||(r.name+' '+r.desc+' '+r.menu.map(m=>m.n).join(' ')).toLowerCase().includes(q))&&(!cat||({burger:/burger|hamburg/i,pizza:/pizza/i,taco:/taco|mex/i,sushi:/sushi/i}[cat]).test(r.name+' '+r.desc))).map(r=>`<div class="card" onclick="openRest(${r.id})"><img src="${r.img}" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=FoodTrack'"><div class="card-body"><h3>${r.name}</h3><p class="mut">${r.desc}</p>${r.svc.map(x=>`<span class="tag">${x}</span>`).join('')}<p style="margin-top:8px;color:var(--ok);font-size:.82rem">● Disponible</p></div></div>`).join('')||'<p class="mut">No encontramos restaurantes con esa búsqueda.</p>'};
 function wrapPersist(name){const fn=window[name];if(typeof fn!=='function')return;window[name]=function(...args){const result=fn.apply(this,args);persist();return result}}
-['placeOrder','setStatus','cancelOrder','acceptOrder','adminRename','adminToggle','adminDelete','addNotif','toggleNotifs'].forEach(wrapPersist);
+['adminRename','adminToggle','adminDelete','addNotif','toggleNotifs'].forEach(wrapPersist);
+/* ACTUALIZACIÓN INTEGRAL: horarios semanales, pedidos programados, facturación e idiomas. */
+let editingRestaurantId = null;
+const FT_DAYS = [['mon','Lunes'],['tue','Martes'],['wed','Miércoles'],['thu','Jueves'],['fri','Viernes'],['sat','Sábado'],['sun','Domingo']];
+function scheduleInputValue(hours, key) { return (Array.isArray(hours?.[key]) ? hours[key] : []).map(x => `${x.open}-${x.close}`).join(', '); }
+function renderWeeklyHoursEditor(hours={}) {
+  const box=$('weeklyHoursEditor'); if(!box)return;
+  box.innerHTML=FT_DAYS.map(([key,label])=>`<label class="hours-row">${label}<input data-hours-day="${key}" placeholder="08:00-12:00, 14:00-22:00" value="${scheduleInputValue(hours,key)}"></label>`).join('');
+}
+function readWeeklyHoursEditor() {
+  const result={};
+  document.querySelectorAll('[data-hours-day]').forEach(el=>{
+    const key=el.dataset.hoursDay, raw=el.value.trim(); result[key]=[];
+    if(!raw)return;
+    for(const part of raw.split(',')){
+      const m=part.trim().match(/^(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$/);
+      if(!m || !/^([01]\d|2[0-3]):[0-5]\d$/.test(m[1]) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(m[2]) || m[1]===m[2]) throw new Error(`Horario no válido en ${FT_DAYS.find(x=>x[0]===key)[1]}. Usa HH:MM-HH:MM.`);
+      result[key].push({open:m[1],close:m[2]});
+    }
+  });
+  return result;
+}
+function formatWeeklyHours(hours, legacyOpen, legacyClose) {
+  if(!hours || !Object.values(hours).some(v=>Array.isArray(v)&&v.length))return legacyOpen&&legacyClose?`Todos los días: ${legacyOpen}-${legacyClose}`:'Sin horario semanal configurado';
+  return FT_DAYS.map(([k,d])=>`${d}: ${scheduleInputValue(hours,k)||'cerrado'}`).join(' · ');
+}
+function openBizForm(isEdit, restaurantId) {
+  const isAdmin=currentUser?.role==='admin';
+  const r=isEdit ? (isAdmin ? restaurants.find(x=>String(x.id)===String(restaurantId)) : selectedOwnerRestaurant()) : null;
+  if(isEdit&&!r)return toast('No se encontró el negocio que deseas modificar.','warn');
+  if(!isAdmin&&!r)return toast('Tu administrador debe crear y asignarte un negocio.','warn');
+  editingRestaurantId=r?String(r.id):null; editBiz=Boolean(r);
+  $('bizTitle').textContent=editBiz?'✏️ Modificar negocio':'🏪 Crear negocio';
+  $('bName').value=r?.name||'';$('bDesc').value=r?.desc||'';$('bImg').value=r&&!String(r.img||'').startsWith('data:')?(r.img||''):'';$('bImgFile').value='';
+  $('bSvc').value=(r?.svc||[]).join(', ');$('bPhone').value=r?.phone||'';$('bWhatsapp').value=r?.whatsapp||'';$('bAddress').value=r?.address||'';
+  $('bActive').checked=r?.isOpen!==false;
+  $('bPrepMinutes').value=Number(r?.prepMinutes)||15;$('bDeliveryMinutes').value=Number(r?.deliveryMinutes ?? 30);
+  let initialHours=r?.hours||{};
+  if(r&&!Object.values(initialHours).some(v=>Array.isArray(v)&&v.length)&&!r.hoursConfigured){
+    const legacyOpen=r.openTime||'00:00',legacyClose=r.closeTime||'23:59';
+    initialHours=Object.fromEntries(FT_DAYS.map(([k])=>[k,[{open:legacyOpen,close:legacyClose}]]));
+  }
+  renderWeeklyHoursEditor(initialHours);
+  const ownerLabel=$('bOwner')?.closest('label'); if(ownerLabel)ownerLabel.style.display=isAdmin?'block':'none';
+  if(isAdmin){$('bOwner').value=r?.ownerId?String(r.ownerId):'';api('/api/admin/users').then(rows=>{$('bOwner').innerHTML='<option value="">Sin asignar</option>'+rows.filter(u=>u.role==='dueno'&&u.account_status==='active').map(u=>`<option value="${u.id}">${u.name} (@${u.username})</option>`).join('');$('bOwner').value=r?.ownerId?String(r.ownerId):'';}).catch(()=>{});}
+  $('m-biz').classList.add('open');
+}
+async function saveBiz(){
+  try{
+    const file=$('bImgFile').files[0], uploaded=file?await readImageFile(file):'';
+    const name=$('bName').value.trim(),desc=$('bDesc').value.trim(),img=uploaded||$('bImg').value.trim();
+    const svc=$('bSvc').value.split(',').map(x=>x.trim()).filter(Boolean),phone=$('bPhone').value.trim(),whatsapp=$('bWhatsapp').value.trim(),address=$('bAddress').value.trim();
+    if(!name)return toast('El nombre del negocio es obligatorio.','warn');
+    const hours=readWeeklyHoursEditor(),prepMinutes=Math.max(15,Math.min(240,Number($('bPrepMinutes').value)||15)),deliveryMinutes=Math.max(0,Math.min(240,Number($('bDeliveryMinutes').value)||0));
+    const body={name,desc:desc||'Nuevo negocio',img,svc:svc.length?svc:['Delivery propio'],phone,whatsapp,address,hours,prepMinutes,deliveryMinutes,isOpen:$('bActive').checked};
+    if(editingRestaurantId){
+      if(currentUser?.role==='admin')body.ownerId=$('bOwner').value?Number($('bOwner').value):null;
+      const data=await api('/api/restaurants/'+encodeURIComponent(editingRestaurantId),{method:'PUT',body:JSON.stringify(body)});
+      restaurants=restaurants.map(x=>String(x.id)===String(editingRestaurantId)?data.restaurant:x);
+      toast('Negocio actualizado y guardado.','ok');
+    }else{
+      if(currentUser?.role!=='admin')throw new Error('Solo el administrador puede crear negocios.');
+      body.ownerId=$('bOwner').value?Number($('bOwner').value):null;
+      const result=await api('/api/restaurants',{method:'POST',body:JSON.stringify(body)});restaurants.push(result.restaurant);
+      toast('Negocio creado. Ya puedes asignarle un dueño.','ok');
+    }
+    closeM('m-biz');if(role==='admin')renderAdmin();if(role==='dueno')renderOwner();renderRests();
+  }catch(e){toast('No se pudo guardar el negocio: '+e.message,'warn');}
+}
+function renderOwner(){
+  const sel=$('ownerSel'),mine=restaurants.filter(r=>Number(r.ownerId)===Number(currentUser?.id));if($('alertTone'))$('alertTone').value=alertToneName();
+  sel.innerHTML=mine.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');sel.style.display=mine.length>1?'block':'none';
+  if(!mine.length){$('ownerInfo').innerHTML='<p class="mut">Todavía no tienes un negocio asignado. Solicita al administrador que cree el negocio y lo asigne a tu cuenta.</p>';$('ownerStats').innerHTML='';$('ownerMenu').innerHTML='<p class="mut">Cuando tengas un negocio asignado podrás administrar aquí tus platos y precios.</p>';$('ownerOrders').innerHTML='<p class="mut">Todavía no hay pedidos.</p>';return;}
+  const prev=sel.value;if(prev&&mine.some(x=>String(x.id)===String(prev)))sel.value=prev;const r=selectedOwnerRestaurant();
+  const billing=r.billing;let billingLine='';if(billing){const due=String(billing.due_on).slice(0,10);const graceDate=new Date(due+'T00:00:00');graceDate.setDate(graceDate.getDate()+Number(billing.grace_days||7));const graceText=`hasta ${graceDate.toLocaleDateString()}`;const today=new Date();today.setHours(0,0,0,0);const dueDate=new Date(due+'T00:00:00');const daysLeft=Math.round((dueDate-today)/86400000);billingLine=`<p class="mut">Suscripción: ${billing.plan_name} · ${fmt(billing.fee)} ${billing.currency} · Vence ${due}</p>${billing.status==='grace'?`<p style="color:#a65c00"><b>Pago pendiente.</b> Tu período de gracia termina ${graceText}.</p>`:billing.status==='suspended'?'<p style="color:#b42318"><b>Negocio suspendido por impago.</b> Contacta con administración y registra el pago para reactivarlo.</p>':daysLeft<=3?`<p style="color:#a65c00"><b>Atención:</b> tu cuota vence ${daysLeft===0?'hoy':daysLeft===1?'mañana':'en '+daysLeft+' días'}.</p>`:'<p class="mut">Suscripción al día. Después del vencimiento hay 7 días de gracia para registrar el pago.</p>'}`;}
+  $('ownerInfo').innerHTML=`<p><b>${r.name}</b>${r.blocked?' <span class="status st-recibido">Bloqueado por administración</span>':''}${r.subscriptionBlocked?' <span class="status st-recibido">Suspendido por cuota pendiente</span>':''} — ${r.desc||''}</p><p class="mut" style="margin-top:4px">Servicios: ${(r.svc||[]).join(' · ')}</p><p class="mut">Dirección: ${r.address||'No configurada'}</p><p class="mut">Teléfono: ${r.phone||'No configurado'} · WhatsApp: ${r.whatsapp||'No configurado'}</p><p class="mut">${formatWeeklyHours(r.hours,r.openTime,r.closeTime)}</p><p class="mut">Preparación: ${Number(r.prepMinutes)||15} min · Trayecto estimado: ${Number(r.deliveryMinutes ?? 30)} min</p>${billingLine}`;
+  renderOwnerStats(r);renderOwnerOrders();renderOwnerMenu(r);
+}
+function toggleOrderSchedule(){
+  const later=$('orderScheduleMode').value==='later';$('scheduledOrderBox').style.display=later?'block':'none';
+  if(later){const min=new Date(Date.now()+15*60000);min.setSeconds(0,0);min.setMinutes(Math.ceil(min.getMinutes()/5)*5);const value=new Date(min.getTime()-min.getTimezoneOffset()*60000).toISOString().slice(0,16);$('scheduledFor').min=value;if(!$('scheduledFor').value)$('scheduledFor').value=value;}
+}
+async function placeOrder(){
+  const name=$('cName').value.trim(),addr=$('cAddr').value.trim(),phone=$('cPhone').value.trim();
+  if(!name||!addr||!phone)return toast('Completa nombre, dirección y teléfono.','warn');
+  let scheduledFor=null;
+  if($('orderScheduleMode').value==='later'){
+    const raw=$('scheduledFor').value,dt=raw?new Date(raw):null;
+    if(!dt||Number.isNaN(dt.getTime())||dt.getTime()<Date.now()+15*60000)return toast('Selecciona una hora con al menos 15 minutos de antelación.','warn');
+    scheduledFor=dt.toISOString();
+  }
+  const body={rest:currentRest.name,restId:currentRest.id,client:name,phone,addr,pay:$('cPay').value,items:cart.map(c=>({...c})),total:cart.reduce((v,c)=>v+c.p*c.q,0),scheduledFor};
+  try{
+    const saved=await api('/api/orders',{method:'POST',body:JSON.stringify(body)});orders.push(saved);closeM('m-cart');cart=[];updateCartBar();
+    $('orderScheduleMode').value='now';toggleOrderSchedule();addNotif(`✅ Pedido #${saved.id} enviado a ${saved.rest}.`);
+    toast(`Pedido #${saved.id} realizado. El negocio recibió tu solicitud.`,'ok');renderMyOrders();
+  }catch(e){toast('No se pudo registrar el pedido: '+e.message,'warn');}
+}
+function renderMyOrders(){
+  const box=$('myOrders');if(!box)return;
+  box.innerHTML=orders.length?orders.slice().reverse().map(o=>{
+    const timing=o.scheduledFor?`Hora solicitada para que esté listo: ${new Date(o.scheduledFor).toLocaleString()}`:`Solicitado: ${o.t||new Date(o.createdAt||Date.now()).toLocaleTimeString()}`;
+    const eta=o.deliveryEtaAt?` · Entrega estimada: ${new Date(o.deliveryEtaAt).toLocaleTimeString()}`:'';
+    return `<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.rest} · ${fmt(o.total)} · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span><br><span class="mut">${timing}${eta}</span><br>${o.pay==='Efectivo'?'<span class="tag">💵 Efectivo</span>':'<span class="tag">💳 Verifone en entrega</span>'} <button class="hist" onclick="alert('${(o.items||[]).map(i=>i.q+'× '+i.n+' ('+i.l+')').join('\\n')}')">Ver detalle</button></p>`;
+  }).join(''):'<p class="mut">Aún no has hecho pedidos.</p>';
+}
+async function clearMyOrderHistory(){
+  if(!currentUser||currentUser.role!=='cliente')return toast('Inicia sesión como cliente.','warn');
+  if(!orders.length)return toast('No hay pedidos que ocultar.','warn');
+  if(!confirm('¿Ocultar todo tu historial de pedidos de esta cuenta? Los pedidos y registros del negocio se conservarán.'))return;
+  try{const result=await api('/api/me/orders/history',{method:'DELETE'});orders=[];renderMyOrders();toast(`${result.hidden} pedidos ocultados de tu historial. Los registros se conservaron.`,'ok');}
+  catch(e){toast(e.message,'warn');}
+}
+function orderTimeLabel(o){
+  if(o.scheduledFor)return '🕒 Programado para '+new Date(o.scheduledFor).toLocaleString();
+  return '⚡ Lo antes posible · listo estimado '+(o.readyAt?new Date(o.readyAt).toLocaleTimeString(): 'según preparación');
+}
+function renderOwnerOrders(){
+  const r=selectedOwnerRestaurant(),mine=r?orders.filter(o=>String(o.restId)===String(r.id)&&!['entregado','cancelado'].includes(o.status)):[];
+  $('ownerOrders').innerHTML=mine.length?mine.map(o=>`<p style="padding:10px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.client} · ${o.phone} · ${fmt(o.total)} · <b>${o.pay}</b> · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span><br><b style="color:#b34c20">${orderTimeLabel(o)}</b>${o.deliveryEtaAt?`<br><span class="mut">Entrega domicilio estimada: ${new Date(o.deliveryEtaAt).toLocaleTimeString()}</span>`:''}<br><span class="mut" style="font-size:.82rem">${(o.items||[]).map(i=>i.q+'× '+i.n+' ('+i.l+')').join(', ')} → ${o.addr}</span><br>${o.status==='recibido'?`<button class="btn small warn" onclick="setStatus(${o.id},'preparacion')">Aceptar y preparar 🍳</button> <button class="btn small bad" onclick="cancelOrder(${o.id})">Rechazar ✕</button>`:''}${o.status==='preparacion'?`<button class="btn small blu" onclick="setStatus(${o.id},'listo')">Marcar listo ✅</button>`:''}${o.status==='listo'?'<span class="mut">Esperando repartidor…</span>':''}${o.status==='aceptado'?`<span class="mut">Repartidor asignado: ${o.driverName||'en camino'} · entrega en curso</span>`:''}</p>`).join(''):'<p class="mut">No hay pedidos nuevos.</p>';
+}
+renderRests = function(){
+  const q=($('restSearch')?.value||'').trim().toLowerCase(),cat=$('restFilter')?.value||'';
+  const filtered=restaurants.filter(r=>!r.blocked&&!r.ownerSuspended&&!r.subscriptionBlocked&&r.isOpen!==false&&(!q?r.openNow!==false:(r.name+' '+(r.desc||'')+' '+(r.menu||[]).map(m=>m.n).join(' ')).toLowerCase().includes(q))&&(!cat||({burger:/burger|hamburg/i,pizza:/pizza/i,taco:/taco|mex/i,sushi:/sushi/i}[cat]||/.*/).test(r.name+' '+(r.desc||''))));
+  $('restGrid').innerHTML=filtered.map(r=>`<div class="card" onclick="openRest(${r.id})"><img src="${r.img||''}" onerror="this.src='https://placehold.co/500x260/ffe0d0/ff6b35?text=FoodTrack'"><div class="card-body"><h3>${r.name}</h3><p class="mut">${r.desc||''}</p>${(r.svc||[]).map(x=>`<span class="tag">${x}</span>`).join('')}<p style="margin-top:8px;font-size:.82rem;color:${r.openNow===false?'#b7791f':'var(--ok)'}">${r.openNow===false?'● Cerrado · '+(r.nextOpen?(r.nextOpen.dayOffset===1?'abre mañana':r.nextOpen.dayOffset===0?'abre hoy':'abre el '+r.nextOpen.day)+' a las '+r.nextOpen.time:'consulta el horario'):'● Abierto'}</p></div></div>`).join('')||'<p class="mut">No encontramos restaurantes abiertos o coincidentes con esa búsqueda.</p>';
+};
+function fmtTimeForOwner(value){return value?new Date(value).toLocaleString():'—';}
+function alertToneName(){return localStorage.getItem('foodtrack_alert_tone')||'urgent';}
+function saveAlertTone(tone){localStorage.setItem('foodtrack_alert_tone',tone);toast('Tono de avisos guardado.','ok');}
+function playNewOrderTone(){
+  try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;if(!alertAudioContext)alertAudioContext=new AC();if(alertAudioContext.state==='suspended')alertAudioContext.resume();
+    const patterns={urgent:[[880,.16],[660,.16],[990,.3]],bell:[[1046,.32],[784,.42]],double:[[740,.18],[740,.18],[988,.28]],siren:[[520,.2],[900,.2],[520,.2],[900,.3]],soft:[[523,.24],[659,.35]]};
+    let t=alertAudioContext.currentTime+.02;for(const [freq,duration] of patterns[alertToneName()]||patterns.urgent){const osc=alertAudioContext.createOscillator(),gain=alertAudioContext.createGain();osc.type='sine';osc.frequency.value=freq;gain.gain.setValueAtTime(.001,t);gain.gain.exponentialRampToValueAtTime(.24,t+.025);gain.gain.exponentialRampToValueAtTime(.001,t+duration);osc.connect(gain);gain.connect(alertAudioContext.destination);osc.start(t);osc.stop(t+duration+.02);t+=duration+.07;}
+  }catch(e){console.warn('Audio de alerta no disponible',e);}
+}
+function playTestAlert(){playNewOrderTone();if(navigator.vibrate)navigator.vibrate([250,120,250]);}
+function alertNewOrder(ev){
+  const p=ev.payload||{},scheduled=p.scheduledFor?` · Solicitado para ${new Date(p.scheduledFor).toLocaleString()}`:' · Lo antes posible';
+  const msg=`Nuevo pedido #${p.orderId} · ${p.rest||'Tu negocio'} · ${fmt(p.total||0)}${scheduled}`;
+  playNewOrderTone();if(navigator.vibrate)navigator.vibrate([350,150,350,150,600]);
+  if('Notification'in window&&Notification.permission==='granted'){try{new Notification('FoodTrack · Pedido nuevo',{body:msg,icon:'./icon-192.png',tag:'foodtrack-order-'+p.orderId});}catch(_){}}
+  toast('🔔 '+msg,'ok');
+}
+async function renderAdminBilling(){
+  const box=$('adminBilling');if(!box||currentUser?.role!=='admin')return;
+  try{const rows=await api('/api/admin/billing');box.innerHTML=rows.length?rows.map(x=>{
+    const b=x.billing,st=b?.status||'Sin configurar',statusClass=st==='suspended'?'st-recibido':st==='grace'?'st-recibido':'st-entregado';
+    return `<div class="menu-item"><b>${x.restaurant_name}</b> · <span class="status ${statusClass}">${st==='active'?'Al día':st==='grace'?'En período de gracia':st==='suspended'?'Suspendido por impago':'Sin configurar'}</span><br><span class="mut">Alta del negocio: ${x.business_created_at?new Date(x.business_created_at).toLocaleDateString():'anterior a esta versión'}</span><br><span class="mut">${b?`Plan ${b.plan_name} · Cuota ${fmt(b.fee)} ${b.currency} · Alta del plan ${String(b.started_on).slice(0,10)} · Vence ${String(b.due_on).slice(0,10)} · Gracia ${b.grace_days} días`:'No hay cuota ni vencimiento configurados.'}</span><div class="row" style="margin-top:7px"><button class="btn small ghost" onclick="adminConfigureBilling('${x.restaurant_id}')">${b?'Modificar plan':'Configurar plan'}</button>${b?`<button class="btn small ok" onclick="adminRecordPayment('${x.restaurant_id}',${Number(b.fee)||0},'${String(b.due_on).slice(0,10)}')">Registrar pago</button>`:''}</div>${x.payments?.length?`<small class="mut">Último pago: ${new Date(x.payments[0].paid_at).toLocaleDateString()} · ${fmt(x.payments[0].amount)} · cubierto hasta ${String(x.payments[0].covered_until).slice(0,10)}</small>`:''}</div>`;
+  }).join(''):'<p class="mut">No hay negocios registrados.</p>';}
+  catch(e){box.innerHTML='<p class="mut">'+e.message+'</p>';}
+}
+function datePlusMonth(value){const d=value?new Date(value+'T12:00:00'):new Date();d.setMonth(d.getMonth()+1);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+async function adminConfigureBilling(id){
+  const current=(await api('/api/admin/billing')).find(x=>String(x.restaurant_id)===String(id))?.billing;
+  const plan=prompt('Nombre del plan:',current?.plan_name||'Mensual');if(plan===null)return;
+  const fee=prompt('Cuota del plan:',current?.fee??'0');if(fee===null)return;
+  const startedOn=prompt('Fecha de alta del plan (AAAA-MM-DD):',current?String(current.started_on).slice(0,10):new Date().toISOString().slice(0,10));if(startedOn===null)return;
+  const dueOn=prompt('Fecha de vencimiento (AAAA-MM-DD):',current?String(current.due_on).slice(0,10):datePlusMonth());if(dueOn===null)return;
+  try{await api('/api/admin/billing/'+encodeURIComponent(id),{method:'PUT',body:JSON.stringify({planName:plan,fee:Number(fee),startedOn,dueOn,currency:current?.currency||'EUR'})});toast('Suscripción guardada.','ok');renderAdminBilling();}
+  catch(e){toast(e.message,'warn');}
+}
+async function adminRecordPayment(id,fee,due){
+  const amount=prompt('Importe recibido:',String(fee));if(amount===null)return;
+  const coveredUntil=prompt('Nueva fecha cubierta / vencimiento (AAAA-MM-DD):',datePlusMonth(due));if(coveredUntil===null)return;
+  const method=prompt('Método de pago (efectivo, transferencia, etc.):','');if(method===null)return;
+  const reference=prompt('Referencia o comprobante (opcional):','')||'';
+  try{await api('/api/admin/billing/'+encodeURIComponent(id)+'/payments',{method:'POST',body:JSON.stringify({amount:Number(amount),coveredUntil,method,reference})});toast('Pago registrado y negocio reactivado.','ok');renderAdminBilling();const st=await api('/api/state');if(Array.isArray(st.restaurants))restaurants=st.restaurants;}
+  catch(e){toast(e.message,'warn');}
+}
+function adminEditBiz(id){openBizForm(true,id);}
+
+// Entregas sincronizadas en el servidor: ningún pedido queda aceptado solo en memoria del navegador.
+async function acceptOrder(id){
+  try{const data=await api('/api/orders/'+encodeURIComponent(id)+'/claim',{method:'POST'});
+    orders=orders.filter(o=>String(o.id)!==String(id));
+    myDeliveries=[...(myDeliveries||[]).filter(o=>String(o.id)!==String(id)),data.order];
+    renderRepartidor();toast(`Pedido #${id} asignado a tu cuenta. Dirígete al negocio para recogerlo.`,'ok');
+  }catch(e){toast(e.message,'warn');}
+}
+async function completeDelivery(id){
+  try{const data=await api('/api/orders/'+encodeURIComponent(id)+'/delivered',{method:'POST'});
+    myDeliveries=(myDeliveries||[]).map(o=>String(o.id)===String(id)?data.order:o);
+    renderRepartidor();toast(`Pedido #${id} marcado como entregado.`,'ok');
+  }catch(e){toast(e.message,'warn');}
+}
+function renderRepartidor(){
+  const av=$('avail')?.checked,available=(orders||[]).filter(o=>o.status==='listo'&&!o.driverId);
+  $('availOrders').innerHTML=av?(available.length?available.map(o=>`<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · <span class="status st-disponible">Disponible</span><br>📍 Recoger: <b>${o.rest}</b><br>🏠 Entregar: ${o.addr} (${o.client} · ${o.phone})<br>💰 Total a cobrar: <b>${fmt(o.total)}</b> · ${o.pay}<button class="btn small ok" style="margin-top:6px" onclick="acceptOrder('${String(o.id).replace(/'/g,'')}')">Aceptar pedido 🛵</button></p>`).join(''):'<p class="mut">No hay pedidos disponibles por ahora.</p>'):'<p class="mut">Estás <b>desconectado</b>. Activa la disponibilidad para recibir pedidos.</p>';
+  const deliveries=myDeliveries||[];
+  $('myDeliveries').innerHTML=deliveries.length?deliveries.slice().reverse().map(o=>`<p style="padding:9px 0;border-bottom:1px solid #eee;font-size:.9rem"><b>#${o.id}</b> · ${o.rest} → ${o.addr} · ${fmt(o.total)} · <span class="status st-${o.status}">${stTxt[o.status]||o.status}</span>${o.status==='aceptado'?`<br><button class="btn small ok" onclick="completeDelivery('${String(o.id).replace(/'/g,'')}')">Confirmar entrega ✅</button>`:''}${o.status==='entregado'?'<br><span class="mut">Entrega completada</span>':''}</p>`).join(''):'<p class="mut">Aún no has aceptado entregas.</p>';
+}
+const renderAdminBeforeFT = renderAdmin;
+renderAdmin=function(){renderAdminBeforeFT();const box=$('adminList');if(box)box.innerHTML=restaurants.map(r=>`<div class="menu-item"><div class="top"><div class="info"><b>${r.name}</b> ${r.blocked||r.subscriptionBlocked?'<span class="status st-recibido">⛔ Bloqueado</span>':'<span class="status st-entregado">✅ Activo</span>'}<br><span class="mut" style="font-size:.8rem">${r.desc||''} · ${(r.menu||[]).length} platos · ${(r.svc||[]).join(', ')}</span></div></div><div class="row" style="margin-top:6px"><button class="btn small ghost" onclick="adminEditBiz('${r.id}')">✏️ Editar</button><button class="btn small ghost" onclick="adminRename(${r.id})">Cambiar nombre</button><button class="btn small ${r.blocked?'ok':'warn'}" onclick="adminToggle(${r.id})">${r.blocked?'Desbloquear':'Bloquear'}</button></div></div>`).join('')||'<p class="mut">No hay negocios registrados.</p>';renderAdminBilling();};
+
+/* Traducciones de interfaz: el idioma se conserva en este dispositivo. */
+const FT_TRANSLATIONS={
+ en:{'Iniciar sesión':'Sign in','Cerrar sesión':'Log out','Mi perfil':'My profile','Activar avisos':'Enable alerts','Restaurantes cerca de ti':'Restaurants near you','Buscar restaurante o comida…':'Search restaurant or food…','Todas las categorías':'All categories','Mis pedidos':'My orders','Ocultar mi historial':'Hide my history','Aún no has hecho pedidos.':'You have not placed any orders yet.','Panel del dueño':'Owner dashboard','Modificar negocio':'Edit business','Pedidos entrantes':'Incoming orders','Mi menú':'My menu','Agregar plato':'Add dish','Panel del repartidor':'Courier dashboard','Pedidos disponibles':'Available orders','Mis entregas':'My deliveries','Panel del administrador':'Administrator dashboard','Crear cuenta de dueño o repartidor':'Create owner or courier account','Asignar un negocio existente a un dueño':'Assign an existing business to an owner','Todos los negocios':'All businesses','Crear / administrar negocios':'Create / manage businesses','Suscripciones y pagos de restaurantes':'Restaurant subscriptions and payments','Crear negocio':'Create business','Guardar negocio 💾':'Save business 💾','Guardar perfil':'Save profile','Cambiar contraseña':'Change password','Aceptar y preparar 🍳':'Accept and prepare 🍳','Marcar listo ✅':'Mark as ready ✅','Rechazar ✕':'Reject ✕','Ver detalle':'View details','Abierto':'Open','Cerrado':'Closed','Sin notificaciones.':'No notifications.','Fecha y hora para que el pedido esté listo':'Requested date and time','Programar pedido':'Schedule order','Lo antes posible':'As soon as possible','Crear tu cuenta':'Create your account','Nombre completo':'Full name','Nombre de usuario':'Username','Teléfono':'Phone','Dirección':'Address','Contraseña':'Password','Crear cuenta':'Create account','Verifica tu teléfono':'Verify your phone','Iniciar sesión':'Sign in','Entrar':'Log in','Tu próxima comida favorita está aquí':'Your next favourite meal is here','Descubre restaurantes, pide en minutos y sigue tu entrega.':'Discover restaurants, order in minutes and track your delivery.','Servicios separados por coma':'Services separated by commas','Nombre del negocio':'Business name','Descripción':'Description','Teléfono del negocio':'Business phone','WhatsApp del negocio':'Business WhatsApp','Dirección del negocio (opcional)':'Business address (optional)','Horarios semanales':'Weekly opening hours','Preparación (minutos)':'Preparation (minutes)','Trayecto delivery (minutos)':'Delivery travel time (minutes)','Negocio activo / disponible':'Business active / available','Guardar negocio':'Save business','Guardar':'Save','Cancelar':'Cancel','Sin horario semanal configurado':'No weekly hours configured','No encontramos restaurantes abiertos o coincidentes con esa búsqueda.':'No open restaurants or matches found.','El nombre del negocio es obligatorio.':'Business name is required.','Completa nombre, dirección y teléfono.':'Complete name, address and phone.','Los pedidos programados deben solicitarse con al menos 15 minutos de antelación.':'Scheduled orders must be placed at least 15 minutes in advance.','El negocio está cerrado. Programa el pedido para una hora de apertura.':'The business is closed. Schedule the order for an opening time.','El negocio aceptó tu pedido y comenzó a prepararlo.':'The restaurant accepted your order and started preparing it.','Tu pedido está listo.':'Your order is ready.','El negocio canceló tu pedido.':'The restaurant cancelled your order.','Al día':'Up to date','En período de gracia':'In grace period','Suspendido por impago':'Suspended for non-payment','Sin configurar':'Not configured','Configurar plan':'Set up plan','Modificar plan':'Edit plan','Registrar pago':'Record payment','Último pago':'Last payment','Cuota':'Fee','Vence':'Due','Gracia':'Grace','Abre':'Opens','Cierra':'Closes','Abre mañana':'Opens tomorrow','Disponible para entregas':'Available for deliveries','Activar GPS':'Enable GPS','Detener GPS':'Stop GPS','Mi ubicación y seguimiento':'My location and tracking','Ventas de hoy':'Today sales','Ventas del mes':'Monthly sales','Ventas acumuladas':'Total sales','Pedidos realizados':'Orders placed','Comisiones y ganancias':'Commissions and earnings','Ubicaciones de repartidores':'Courier locations','Actualizar GPS':'Refresh GPS','Crear cuenta de dueño o repartidor':'Create owner or courier account','Usuario o contraseña incorrectos.':'Incorrect username or password.','Cuenta bloqueada.':'Account blocked.','Pedido incompleto.':'Incomplete order.','Aceptar y preparar':'Accept and prepare','Marcar listo':'Mark ready','Rechazar':'Reject','Negocio actualizado y guardado.':'Business updated and saved.','Negocio creado. Ya puedes asignarle un dueño.':'Business created. You can now assign an owner.','Tono':'Tone','Probar sonido':'Test sound','Avisos de pedidos':'Order alerts','Entrega estimada':'Estimated delivery','Dueño asignado (solo administración)':'Assigned owner (administrator only)','Dirección del negocio (opcional)':'Business address (optional)','Solo la administración puede registrar nuevos negocios y asignarlos a un dueño.':'Only the administration can register new businesses and assign them to an owner.','Horarios semanales':'Weekly hours','Preparación (minutos)':'Preparation (minutes)','Trayecto delivery (minutos)':'Delivery travel time (minutes)','Deja vacío si ese día no abre.':'Leave blank if closed that day.','Debe haber al menos 15 minutos de antelación. La entrega a domicilio sumará el tiempo de trayecto.':'At least 15 minutes notice is required.','Confirmar pedido':'Confirm order','Ver carrito':'View cart','Datos de entrega':'Delivery details','Mi perfil':'My profile','Actualizar perfil':'Update profile','Mi ubicación y seguimiento':'My location and tracking','Comparte tu ubicación mientras estás conectado para actualizar tu posición de reparto en este dispositivo.':'Share your location while online to update your delivery position on this device.','Crea tu cuenta para hacer pedidos':'Create an account to place orders','Negocio bloqueado por el administrador':'Business blocked by administrator'},
+ fr:{'Iniciar sesión':'Se connecter','Cerrar sesión':'Déconnexion','Mi perfil':'Mon profil','Activar avisos':'Activer les alertes','Restaurantes cerca de ti':'Restaurants près de vous','Buscar restaurante o comida…':'Rechercher un restaurant ou un plat…','Todas las categorías':'Toutes les catégories','Mis pedidos':'Mes commandes','Ocultar mi historial':'Masquer mon historique','Aún no has hecho pedidos.':'Vous n’avez pas encore passé de commande.','Panel del dueño':'Espace restaurateur','Modificar negocio':'Modifier le commerce','Pedidos entrantes':'Commandes entrantes','Mi menú':'Mon menu','Agregar plato':'Ajouter un plat','Panel del repartidor':'Espace livreur','Pedidos disponibles':'Commandes disponibles','Mis entregas':'Mes livraisons','Panel del administrador':'Espace administrateur','Crear cuenta de dueño o repartidor':'Créer un compte restaurateur ou livreur','Asignar un negocio existente a un dueño':'Attribuer un commerce à un restaurateur','Todos los negocios':'Tous les commerces','Crear / administrar negocios':'Créer / gérer les commerces','Suscripciones y pagos de restaurantes':'Abonnements et paiements des restaurants','Crear negocio':'Créer un commerce','Guardar negocio 💾':'Enregistrer le commerce 💾','Guardar perfil':'Enregistrer le profil','Cambiar contraseña':'Changer le mot de passe','Aceptar y preparar 🍳':'Accepter et préparer 🍳','Marcar listo ✅':'Marquer comme prêt ✅','Rechazar ✕':'Refuser ✕','Ver detalle':'Voir le détail','Abierto':'Ouvert','Cerrado':'Fermé','Sin notificaciones.':'Aucune notification.','Fecha y hora para que el pedido esté listo':'Date et heure souhaitées','Programar pedido':'Programmer la commande','Lo antes posible':'Dès que possible','Crear tu cuenta':'Créer votre compte','Nombre completo':'Nom complet','Nombre de usuario':'Nom d’utilisateur','Teléfono':'Téléphone','Dirección':'Adresse','Contraseña':'Mot de passe','Crear cuenta':'Créer un compte','Verifica tu teléfono':'Vérifiez votre téléphone','Entrar':'Connexion','Tu próxima comida favorita está aquí':'Votre prochain plat préféré est ici','Descubre restaurantes, pide en minutos y sigue tu entrega.':'Découvrez des restaurants, commandez et suivez votre livraison.','Servicios separados por coma':'Services séparés par des virgules','Nombre del negocio':'Nom du commerce','Descripción':'Description','Teléfono del negocio':'Téléphone du commerce','WhatsApp del negocio':'WhatsApp du commerce','Dirección del negocio (opcional)':'Adresse du commerce (facultatif)','Horarios semanales':'Horaires hebdomadaires','Preparación (minutos)':'Préparation (minutes)','Trayecto delivery (minutos)':'Trajet de livraison (minutes)','Negocio activo / disponible':'Commerce actif / disponible','Guardar negocio':'Enregistrer le commerce','Guardar':'Enregistrer','Cancelar':'Annuler','Sin horario semanal configurado':'Aucun horaire hebdomadaire configuré','No encontramos restaurantes abiertos o coincidentes con esa búsqueda.':'Aucun restaurant ouvert ou résultat correspondant trouvé.','El nombre del negocio es obligatorio.':'Le nom du commerce est obligatoire.','Completa nombre, dirección y teléfono.':'Renseignez le nom, l’adresse et le téléphone.','Los pedidos programados deben solicitarse con al menos 15 minutos de antelación.':'Les commandes programmées doivent être passées au moins 15 minutes à l’avance.','El negocio está cerrado. Programa el pedido para una hora de apertura.':'Le commerce est fermé. Programmez la commande pendant les heures d’ouverture.','El negocio aceptó tu pedido y comenzó a prepararlo.':'Le restaurant a accepté votre commande et a commencé la préparation.','Tu pedido está listo.':'Votre commande est prête.','El negocio canceló tu pedido.':'Le restaurant a annulé votre commande.','Al día':'À jour','En período de gracia':'Période de grâce','Suspendido por impago':'Suspendu pour non-paiement','Sin configurar':'Non configuré','Configurar plan':'Configurer le forfait','Modificar plan':'Modifier le forfait','Registrar pago':'Enregistrer le paiement','Último pago':'Dernier paiement','Cuota':'Frais','Vence':'Échéance','Gracia':'Grâce','Disponible para entregas':'Disponible pour les livraisons','Activar GPS':'Activer le GPS','Detener GPS':'Arrêter le GPS','Mi ubicación y seguimiento':'Ma position et suivi','Ventas de hoy':'Ventes du jour','Ventas del mes':'Ventes du mois','Ventas acumuladas':'Ventes cumulées','Comisiones y ganancias':'Commissions et revenus','Ubicaciones de repartidores':'Positions des livreurs','Actualizar GPS':'Actualiser le GPS','Usuario o contraseña incorrectos.':'Nom d’utilisateur ou mot de passe incorrect.','Pedido incompleto.':'Commande incomplète.','Aceptar y preparar':'Accepter et préparer','Marcar listo':'Marquer comme prêt','Rechazar':'Refuser','Negocio actualizado y guardado.':'Commerce mis à jour et enregistré.','Negocio creado. Ya puedes asignarle un dueño.':'Commerce créé. Vous pouvez maintenant lui attribuer un propriétaire.','Tono':'Sonnerie','Probar sonido':'Tester le son','Avisos de pedidos':'Alertes de commandes','Entrega estimada':'Livraison estimée','Dueño asignado (solo administración)':'Propriétaire attribué (administration uniquement)','Dirección del negocio (opcional)':'Adresse du commerce (facultatif)','Solo la administración puede registrar nuevos negocios y asignarlos a un dueño.':'Seule l’administration peut enregistrer de nouveaux commerces et les attribuer à un propriétaire.','Horarios semanales':'Horaires hebdomadaires','Preparación (minutos)':'Préparation (minutes)','Trayecto delivery (minutos)':'Trajet de livraison (minutes)','Deja vacío si ese día no abre.':'Laissez vide si le commerce est fermé ce jour-là.','Debe haber al menos 15 minutos de antelación. La entrega a domicilio sumará el tiempo de trayecto.':'Un délai minimum de 15 minutes est requis.','Confirmar pedido':'Confirmer la commande','Ver carrito':'Voir le panier','Datos de entrega':'Informations de livraison','Mi perfil':'Mon profil','Actualizar perfil':'Mettre à jour le profil','Mi ubicación y seguimiento':'Ma position et suivi','Comparte tu ubicación mientras estás conectado para actualizar tu posición de reparto en este dispositivo.':'Partagez votre position lorsque vous êtes connecté pour actualiser votre position de livraison.','Crea tu cuenta para hacer pedidos':'Créez un compte pour passer commande','Negocio bloqueado por el administrador':'Commerce bloqué par l’administrateur'}
+};
+const foodTrackOriginalText=new WeakMap(),foodTrackOriginalAttrs=new WeakMap();
+function applyFoodTrackLanguage(){
+  const lang=localStorage.getItem('foodtrack_language')||'es';$('languageSelect').value=lang;document.documentElement.lang=lang;
+  const dict=FT_TRANSLATIONS[lang]||{};
+  const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let node;
+  while(node=walker.nextNode()){if(!foodTrackOriginalText.has(node))foodTrackOriginalText.set(node,node.nodeValue);let text=foodTrackOriginalText.get(node);for(const [es,tr] of Object.entries(dict))text=text.replaceAll(es,tr);if(text!==node.nodeValue)node.nodeValue=text;}
+  document.querySelectorAll('input[placeholder],textarea[placeholder],button[title]').forEach(el=>{let original=foodTrackOriginalAttrs.get(el);if(!original){original={placeholder:el.getAttribute('placeholder'),title:el.getAttribute('title')};foodTrackOriginalAttrs.set(el,original);}for(const attr of ['placeholder','title'])if(original[attr]!==null){let value=original[attr];for(const [es,tr] of Object.entries(dict))value=value.replaceAll(es,tr);if(el.getAttribute(attr)!==value)el.setAttribute(attr,value);}});
+}
+function setLanguage(lang){localStorage.setItem('foodtrack_language',['es','en','fr'].includes(lang)?lang:'es');applyFoodTrackLanguage();}
+const foodTrackLangObserver=new MutationObserver(()=>{if(!foodTrackLangObserver.busy){foodTrackLangObserver.busy=true;applyFoodTrackLanguage();foodTrackLangObserver.busy=false;}});
+foodTrackLangObserver.observe(document.body,{childList:true,subtree:true,characterData:true});
+applyFoodTrackLanguage();
+
+
 initRemote();
 setInterval(pollPrivateEvents,4000);
 // Sincroniza pedidos y paneles periódicamente para reflejar cambios de otros usuarios.

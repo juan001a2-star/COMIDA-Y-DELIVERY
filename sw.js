@@ -1,5 +1,5 @@
 /* Service Worker FoodTrack Pro: caché + notificaciones Web Push VAPID */
-const CACHE = 'foodtrack-v8-webpush-vapid';
+const CACHE = 'foodtrack-v9-integrated-schedule-billing';
 const ARCHIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
@@ -19,7 +19,9 @@ self.addEventListener('push', event => {
     badge: data.badge || '/icon-192.png',
     tag: data.tag || 'foodtrack-update',
     renotify: true,
-    vibrate: [250, 120, 250, 120, 500],
+    requireInteraction: true,
+    silent: false,
+    vibrate: [350, 150, 350, 150, 650],
     data: data.data || { url: '/' }
   };
   event.waitUntil(self.registration.showNotification(title, options));

@@ -1,63 +1,32 @@
-FOODTRACK PRO v3.3 — WEB PUSH NATIVO CON VAPID (SIN FIREBASE)
-==============================================================
+FOODTRACK PRO 4.0 — ALERTAS WEB PUSH, SONIDO Y VIBRACIÓN
+=======================================================
 
-Esta versión sustituye Firebase Cloud Messaging por Web Push estándar. Render sigue alojando la aplicación, ejecuta el envío desde el servidor y PostgreSQL guarda las suscripciones de cada dispositivo.
+VARIABLES QUE DEBEN ESTAR EN EL SERVICIO WEB DE RENDER
+- WEB_PUSH_PUBLIC_KEY
+- WEB_PUSH_PRIVATE_KEY
+- WEB_PUSH_SUBJECT (por ejemplo, mailto:tu-correo-real@example.com)
 
-QUÉ HACE
-- El dueño recibe push cuando llega un pedido a uno de sus negocios.
-- El cliente recibe push cuando el negocio acepta, marca como listo o cancela su pedido.
-- Cada suscripción queda asociada al usuario autenticado. No se envían pedidos a otros dueños.
-- El Service Worker muestra las notificaciones aunque la web no esté abierta, siempre que el navegador/SO admita Web Push y el usuario haya concedido permiso.
-- Los endpoints caducados (HTTP 404/410) se eliminan automáticamente de PostgreSQL.
-- No usa Firebase ni credenciales de Firebase.
+La clave privada debe permanecer solamente como variable secreta de Render. No la subas a GitHub ni la compartas en capturas o mensajes. Si ya configuraste estas variables, consérvalas.
 
-CONFIGURACIÓN EN RENDER
-En el servicio foodtrack-pro > Environment agrega:
+ACTIVAR ALERTAS EN CADA DISPOSITIVO
+1. Entra en FoodTrack desde la dirección HTTPS del servicio.
+2. Inicia sesión como dueño o cliente.
+3. Pulsa “Activar avisos” y permite las notificaciones.
+4. En el panel del dueño, selecciona el tono y pulsa “Probar sonido”.
+5. Repite la activación en cada navegador o dispositivo que quieras usar.
 
-WEB_PUSH_PUBLIC_KEY = clave pública VAPID
-WEB_PUSH_PRIVATE_KEY = clave privada VAPID (SECRETA; nunca subir a GitHub)
-WEB_PUSH_SUBJECT = mailto:tu-correo-de-soporte@dominio.com
+QUÉ DEBE OCURRIR
+- Un pedido nuevo genera aviso privado para el dueño de ese negocio.
+- El cliente recibe avisos cuando el negocio acepta el pedido, lo marca listo o lo cancela. También recibe avisos al asignarse un repartidor y al confirmarse la entrega.
+- El dueño recibe avisos cuando un repartidor acepta o completa una entrega.
+- El Service Worker presenta notificaciones Push y solicita vibración si la plataforma lo permite.
 
-Generar un par VAPID desde tu computadora:
-1. Descarga/instala Node.js 20 o superior.
-2. En la carpeta del proyecto ejecuta: npm install
-3. Ejecuta: npx web-push generate-vapid-keys
-4. Copia Public Key a WEB_PUSH_PUBLIC_KEY y Private Key a WEB_PUSH_PRIVATE_KEY en Render.
-5. WEB_PUSH_SUBJECT debe ser un mailto: válido o una URL de contacto.
+LIMITACIONES DEL DISPOSITIVO
+- El volumen final lo controla el dispositivo, el navegador y el sistema operativo. La aplicación no puede superar ese volumen.
+- La vibración no está soportada por todos los navegadores, especialmente en algunos equipos de escritorio.
+- El sonido personalizado de la página funciona cuando FoodTrack está abierto y el navegador permite reproducir audio.
+- Las notificaciones en segundo plano dependen del permiso, del navegador, del sistema operativo y de que el servicio Push esté correctamente configurado.
+- En iPhone/iPad, el soporte de Web Push depende de la versión de iOS/iPadOS y de que la aplicación esté instalada en la pantalla de inicio.
 
-También puedes generar las claves en tu equipo con:
-  npx web-push generate-vapid-keys
-No compartas la clave privada ni la incluyas en el repositorio.
-
-DESPLIEGUE
-1. Haz una copia de seguridad de PostgreSQL.
-2. Copia el contenido de esta carpeta foodtrack a la raíz del repositorio local, conservando .git.
-3. Ejecuta:
-   git add .
-   git commit -m "FoodTrack v3.3 Web Push VAPID sin Firebase"
-   git push origin main
-   (usa master si esa es tu rama)
-4. Render instalará la dependencia web-push con npm install.
-5. Configura las tres variables WEB_PUSH_* en Render. No cambies DATABASE_URL ni JWT_SECRET.
-6. Comprueba /api/health y luego entra desde HTTPS en cada teléfono.
-7. Inicia sesión como dueño/cliente y pulsa “Activar avisos”. Acepta el permiso.
-
-PRUEBA
-- Registra un dispositivo con la cuenta de un dueño.
-- Registra otro dispositivo con una cuenta de cliente.
-- Haz un pedido desde el cliente. Solo el dueño asignado debe recibirlo.
-- Acepta el pedido y comprueba la notificación del cliente.
-- Marca el pedido como listo y comprueba la segunda notificación.
-
-LIMITACIONES IMPORTANTES
-- Web Push funciona en navegadores compatibles con HTTPS y permisos concedidos. En Android, Chrome suele admitirlo. En iPhone/iPad requiere iOS/iPadOS 16.4 o posterior y que la web app se añada a la pantalla de inicio.
-- El navegador/SO controla el sonido, la vibración, el modo No molestar y las restricciones de batería. La aplicación solicita vibración, pero no puede forzarla en todos los dispositivos ni garantizar sonido si el teléfono está silenciado.
-- La entrega requiere conexión a internet y el servicio push del navegador/SO disponible.
-- La aplicación debe estar desplegada con este Service Worker y cada usuario debe activar las notificaciones en cada dispositivo.
-- No se borra ni se recrea la base de datos. Se añade una tabla push_subscriptions; la tabla antigua push_tokens se deja intacta por compatibilidad.
-
-SEGURIDAD
-- WEB_PUSH_PRIVATE_KEY solo en Render como variable secreta.
-- No publiques las claves VAPID privadas ni las envíes por chat.
-- Las suscripciones se registran usando una sesión autenticada; el servidor filtra por ID de usuario.
-- No cambies DATABASE_URL ni JWT_SECRET.
+PRUEBA RECOMENDADA
+Usa dos dispositivos: inicia sesión como dueño en uno y como cliente en otro. Activa avisos en ambos. Crea un pedido de prueba; comprueba el aviso al dueño, acepta el pedido, márcalo listo, inicia sesión como repartidor en un tercer dispositivo o cambia de cuenta para aceptar y completar la entrega. Comprueba los avisos de estado del cliente.

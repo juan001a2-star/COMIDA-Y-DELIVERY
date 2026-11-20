@@ -1,8 +1,8 @@
 {
   "name": "foodtrack-pro-render",
-  "version": "1.4.0",
+  "version": "4.0.0",
   "private": true,
-  "description": "FoodTrack Pro con notificaciones Web Push VAPID desde Render",
+  "description": "FoodTrack Pro v4: horarios semanales, pedidos programados, facturación, alertas y gestión de entregas.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1,67 +1,59 @@
-FOODTRACK PRO — VERSIÓN 3 (PERFILES Y CONTROL DE CUENTAS)
-=======================================================
+FOODTRACK PRO 4.0 — ACTUALIZACIÓN SEGURA EN GITHUB Y RENDER
+===========================================================
 
-CAMBIOS INCORPORADOS EN ESTA ENTREGA
-- Perfil personal para cliente, dueño, repartidor y administrador: editar nombre, usuario, teléfono y dirección.
-- Cambio de contraseña desde el perfil, verificando primero la contraseña actual.
-- Contraseñas con mínimo de 4 caracteres, según la decisión solicitada. Recomendación: usar contraseñas más largas por seguridad.
-- Botón para mostrar u ocultar la contraseña en inicio de sesión, registro y creación de cuentas.
-- El administrador puede consultar cuentas, modificar datos/rol, restablecer contraseña, bloquear, desbloquear o eliminar permanentemente.
-- El bloqueo conserva la cuenta y sus datos; impide iniciar sesión. No existe eliminación automática por tiempo.
-- Al bloquear al dueño, sus negocios dejan de aparecer a los clientes. Al reactivarlo, vuelven a estar disponibles según sus horarios.
-- La eliminación permanente pide confirmación en la interfaz. Se anonimiza el contacto del cliente en pedidos históricos y se conserva la operación histórica; los negocios del dueño eliminado quedan sin propietario asignado.
-- Las contraseñas se almacenan como hashes bcrypt. El administrador NO puede ver la contraseña original; puede restablecerla.
-- Negocios: teléfono, WhatsApp, horario de apertura/cierre, interruptor activo y fotografía/flyer.
-- Platos: imagen opcional, por URL o archivo de imagen pequeño (máximo 700 KB por imagen).
-- El catálogo de clientes filtra negocios bloqueados, suspendidos, desactivados o fuera del horario configurado.
-- Panel del dueño: resumen de ventas del día, mes y acumuladas, según los pedidos registrados.
-- Panel administrador: resumen de pedidos y ventas por negocio.
-- Migraciones automáticas agregan campos de estado de cuenta a las bases de datos existentes.
-- Se actualizó la caché del Service Worker.
+ANTES DE CAMBIAR CÓDIGO
+-----------------------
+1. En Render, abre el servicio PostgreSQL que ya utiliza FoodTrack Pro y crea/descarga una copia de seguridad (backup/export) antes de desplegar.
+2. Comprueba que el servicio web `foodtrack-pro` continúa conectado a la misma base de datos.
+3. NO borres la base de datos. NO cambies ni regeneres `DATABASE_URL` ni `JWT_SECRET`.
+4. No pulses “Apply Blueprint” ni sincronices el Blueprint de `render.yaml` a ciegas: ese archivo describe recursos y un secreto generable y podría intentar crear/reemplazar recursos o variables. Para esta actualización solo hace falta desplegar el código en el servicio existente.
 
-IMPORTANTE: ALCANCE PENDIENTE
-Esta entrega es una ampliación funcional, no el sistema contable/logístico final completo. Aún falta implementar un libro contable formal con gastos, devoluciones, cierres/caja y conciliaciones; estadísticas detalladas de clientes únicos y productos; asignación y trazabilidad completa de cada delivery; exportaciones e informes; y almacenamiento externo optimizado de imágenes. Los totales actuales se calculan desde pedidos guardados y no equivalen a una liquidación contable ni a pagos procesados.
+COPIAR EL PROYECTO
+------------------
+1. Descarga y descomprime `FoodTrack_Pro_v4_Integral.zip`.
+2. Abre la carpeta interior `foodtrack`.
+3. Copia el CONTENIDO de esa carpeta (server.js, index.html, package.json, sw.js, manifest.json, iconos y documentos) directamente a la carpeta raíz de tu repositorio local existente. No crees otra carpeta `foodtrack` dentro de la raíz por error.
+4. Conserva la carpeta oculta `.git` de tu repositorio local. El ZIP no incluye `.git`, precisamente para que no sobrescribas el repositorio que ya tienes.
+5. No copies ningún archivo `.env` ni claves privadas al repositorio. Esta entrega no necesita que compartas tus secretos.
 
-HORARIOS
-La variable BUSINESS_TIMEZONE determina la zona horaria usada para filtrar negocios. El archivo render.yaml propone America/Martinique. Si la mayoría de negocios está en otro territorio, cambia esta variable en Render por su zona IANA adecuada. Un negocio sin ambos horarios configurados no se filtra por hora; se puede desactivar con el interruptor Activo.
+SUBIR A GITHUB DESDE POWERSHELL
+-------------------------------
+Abre PowerShell dentro de la carpeta raíz local del repositorio (la que contiene `.git`) y ejecuta: 
 
-DESPLIEGUE EN RENDER SIN BORRAR DATOS
-1. Descarga el ZIP de esta versión y descomprímelo.
-2. Entra en la carpeta interior foodtrack.
-3. Copia SU CONTENIDO directamente a la raíz del repositorio GitHub existente. server.js, package.json, index.html y render.yaml deben quedar en la raíz del repositorio, no dentro de otra carpeta foodtrack.
-4. Conserva la carpeta oculta .git de tu repositorio local. No reemplaces ni borres .git.
-5. En PowerShell, desde la carpeta local del repositorio:
-   git status
-   git add .
-   git commit -m "FoodTrack Pro v3: perfiles y control de cuentas"
-   git push origin main
-   Si tu rama se llama master, usa git push origin master.
-6. Espera a que Render termine el despliegue y quede Live.
-7. Comprueba https://TU-DOMINIO/api/health. Debe responder {"ok":true,"database":"connected"}.
+  git status
+  git add .
+  git commit -m "FoodTrack Pro v4 actualización integral"
+  git push origin main
 
-VARIABLES DE RENDER
-Deben existir DATABASE_URL, JWT_SECRET, ADMIN_USERNAME, ADMIN_PHONE y ADMIN_PASSWORD. Para la zona horaria, BUSINESS_TIMEZONE. NO cambies DATABASE_URL ni JWT_SECRET en una instalación con datos existentes. No compartas capturas donde aparezcan secretos.
+Si `git status` indica que no hay cambios, comprueba que copiaste los archivos en la carpeta correcta. Si tu rama principal no se llama `main`, usa el nombre que muestre `git branch --show-current`.
 
-ADMINISTRADOR
-Usuario: el valor de ADMIN_USERNAME (por defecto, admin).
-Contraseña: el valor de ADMIN_PASSWORD configurado en Render. No hay una contraseña universal. Si no existe ADMIN_PHONE y ADMIN_PASSWORD, el administrador inicial no se crea.
+DESPLIEGUE EN RENDER
+--------------------
+1. Render detectará el nuevo commit y desplegará el servicio web existente.
+2. Espera a que el despliegue termine y el servicio aparezca como Live.
+3. Abre `https://TU-DOMINIO/api/health`. Debe responder con `ok: true` y `database: connected`.
+4. Si el deploy falla, no elimines la base de datos ni cambies `DATABASE_URL`/`JWT_SECRET`. Revisa los logs de Render y comparte una captura donde no aparezcan secretos.
 
-SEGURIDAD Y DATOS
-- El administrador no puede leer contraseñas de texto claro ni hashes desde la interfaz. Puede establecer una nueva contraseña.
-- El mínimo de 4 caracteres es débil; se implementó por petición expresa, pero recomendamos al menos 10-12 caracteres.
-- No borres la base de datos de Render ni cambies DATABASE_URL/JWT_SECRET durante esta actualización.
-- Haz una copia de seguridad de PostgreSQL antes de desplegar cambios importantes.
-- La aplicación aún no procesa pagos reales ni liquida comisiones automáticamente.
+VARIABLES DE ENTORNO EN EL SERVICIO EXISTENTE
+----------------------------------------------
+- Mantén intactas `DATABASE_URL` y `JWT_SECRET`.
+- Mantén las variables `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY` y `WEB_PUSH_SUBJECT` que ya hayas configurado. No pegues la clave privada en GitHub ni en el chat.
+- Comprueba `BUSINESS_TIMEZONE`. Si tus negocios operan en Guyana Francesa, el valor debe ser `America/Cayenne`. Si están en otro territorio, usa su nombre de zona horaria IANA correcto. Cambia solamente esta variable desde Environment del servicio web; no apliques el Blueprint completo.
+- Conserva también `ADMIN_USERNAME`, `ADMIN_PHONE` y `ADMIN_PASSWORD` actuales.
 
+DESPUÉS DEL DESPLIEGUE
+----------------------
+1. Entra como administrador y comprueba que aparecen los negocios actuales.
+2. Edita un negocio antiguo y reemplaza el horario amplio precargado por sus horarios reales. Los negocios nuevos no aparecerán a los clientes hasta que se les asigne un dueño y tengan al menos un intervalo de apertura.
+3. En “Suscripciones y pagos de restaurantes”, configura el plan, cuota, fecha de alta y vencimiento de cada negocio. Los negocios sin plan configurado no tienen vencimiento automático.
+4. Activa las notificaciones en el dispositivo del dueño y en el del cliente usando el botón “Activar avisos”; concede el permiso del navegador y prueba el sonido desde el panel del dueño.
+5. Prueba un pedido inmediato, uno programado con más de 15 minutos, aceptación, pedido listo, asignación del repartidor y entrega completada.
+6. Prueba la función “Ocultar mi historial” con una cuenta de cliente de prueba y confirma que los pedidos siguen apareciendo en los informes administrativos del negocio.
 
-ACTUALIZACIÓN v3.1 — ALERTAS DE PEDIDOS Y MENÚ
+ZONA HORARIA Y PEDIDOS PROGRAMADOS
+----------------------------------
+La variable `BUSINESS_TIMEZONE` determina los días y horas de apertura y el cálculo de vencimientos de suscripciones. La hora programada que el cliente introduce significa “pedido listo / disponible para recoger”; la estimación a domicilio agrega el tiempo de trayecto. Prueba las horas con una cuenta y un negocio de la misma zona horaria.
 
-- Al crear un pedido, el servidor genera un evento privado únicamente para la cuenta dueña del negocio asociado.
-- El dueño recibe alerta sonora y vibración cuando FoodTrack está abierto y la sesión del dueño está activa. Se solicita permiso para notificaciones del navegador; la vibración depende de que el dispositivo/navegador la admita.
-- Los repartidores no reciben el pedido al crearse. El estado del pedido se comparte con ellos cuando queda listo y aparece como disponible para recogida.
-- Cuando el dueño acepta el pedido (lo pasa a preparación) o lo marca como listo, el cliente recibe una notificación privada dentro de la aplicación mientras tenga sesión activa.
-- El dueño puede eliminar platos desde Mi menú. La eliminación requiere confirmación y no modifica el detalle histórico guardado dentro de pedidos anteriores.
-- Se añadió la tabla app_events en PostgreSQL mediante migración automática. No borra tablas ni datos existentes.
-
-ACTUALIZACIÓN v3.3 — WEB PUSH SIN FIREBASE
-Para activar notificaciones push sin Firebase, sigue las instrucciones de LEEME_WEB_PUSH.txt. Configura WEB_PUSH_PUBLIC_KEY, WEB_PUSH_PRIVATE_KEY y WEB_PUSH_SUBJECT en Render. La clave privada debe permanecer secreta y nunca subirse a GitHub. No cambies DATABASE_URL ni JWT_SECRET.
+IMPORTANTE
+----------
+Este ZIP contiene código preparado; no está desplegado en Render ni subido a GitHub por esta herramienta. Debes copiarlo a tu repositorio y realizar el push para iniciar el despliegue del servicio existente.
